@@ -1,0 +1,42 @@
+- ipc example / test
+  - create ipc socket (pipe, unix socket, whatever)
+  - enable extrasafe profile that doesn't allow creation of new ones
+  - check you can still send messages
+
+- more builtin profiles
+	take inspiration from pledge promises (https://man.openbsd.org/pledge.2)
+	and systemd profiles https://github.com/systemd/systemd/blob/main/src/shared/seccomp-util.h
+		https://github.com/systemd/systemd/blob/3989bdc1ad7cca4d75c06cdf601fea2cb37ba337/src/shared/seccomp-util.c#L285
+	see also old rkt allowlist https://github.com/rkt/rkt/blob/master/stage1/init/common/seccomp_wildcards.go
+
+- benchmarks
+  - only allow fs access and run ripgrep, compare vs without
+  - only allow network access and run warp or actix server
+  - more complicated example involving server thread + fs writer thread vs no separation?
+  - *just re-use existing libraries' benchmarks and add extrasafe calls*
+  - make sure we're using a separate benchmark profile/cfg so that those dependencies aren't pulled in to ci
+
+- script (maybe already exists in libseccomp or systemd or firejail etc.) or extrasafe "util" API that you can run your tests with and it prints out the syscalls used
+  - could even match against built-in profiles and make suggestions
+
+- ctx.run(|| func)
+  rather than loading into the current thread, start a new thread and load the context just into that thread
+- extrasafe! macro
+  sugar over run() + get return value over channel
+  need to determine what syscalls crossbeam channels need (if any) vs flume (if any) (std mpsc is going to be deprecated)
+  - feature flag for macro with return value over channel
+
+
+## Remove all dependencies
+If you're using extrasafe to provide extra security, it then becomes a target for vulnerabilities, including supply-chain attacks.
+
+### this-error
+Relatively easy to remove: just generate the code from the proc macros and commit it directly to the repository.
+
+### libseccomp
+This is the hardest part to remove as we'd have to either rewrite the bpf generator, or record the output of libseccomp for our specific use-cases and commit it to the repository. For cases like allowing lists of fds to be read from/written to, we'd have to do some additional work to template the generated bpf code, which is essentially what libseccomp is already doing.
+
+There are actually two levels of dependencies here: [The Rust bindings](https://github.com/libseccomp-rs/libseccomp-rs) and [the actual C library](https://github.com/seccomp/libseccomp)
+
+### syscalls
+Relatively easy to remove by copying directly into the repository, but comes with a maintenance burden of having to update the lists when new syscalls are created.

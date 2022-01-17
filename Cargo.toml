@@ -6,10 +6,19 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-seccomp = { git = "https://github.com/polachok/seccomp", rev = "d04f8ac5a8bd" }
+libseccomp = "^0.2"
 libc = "^0.2"
 thiserror = "^1"
 syscalls = "^0.5"
 
 [dev-dependencies]
+bytes = "^1"
+crossbeam = "^0.8"
+crossbeam-queue = "^0.3"
+crossbeam-channel = "^0.5"
 tempfile = "^3"
+tokio = "^1.15"
+hyper = { version = "^0.14", features = ["http1", "server", "runtime", "tcp"] }
+warp = "^0.3"
+reqwest = "^0.11"
+rusqlite = "^0.26"

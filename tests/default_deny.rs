@@ -19,9 +19,8 @@ fn filesystem_no_read() {
     file.sync_all().unwrap();
     drop(file);
 
-    let res = extrasafe::SafetyContext::default_allow()
-        .deny(extrasafe::SystemIO)
-        .load();
+    let res = extrasafe::SafetyContext::new()
+        .apply_to_current_thread();
     assert!(res.is_ok(), "Extrasafe failed {:?}", res.unwrap_err());
 
     // try to read the file and fail
@@ -39,9 +38,8 @@ fn filesystem_no_write() {
 
     let mut file = tempfile().unwrap();
 
-    let res = extrasafe::SafetyContext::default_allow()
-        .deny(extrasafe::SystemIO)
-        .load();
+    let res = extrasafe::SafetyContext::new()
+        .apply_to_current_thread();
     assert!(res.is_ok(), "Extrasafe failed {:?}", res.unwrap_err());
 
     // try to write to the file and fail
@@ -59,9 +57,8 @@ fn filesystem_no_create() {
 
     let dir = tempdir().unwrap();
 
-    let res = extrasafe::SafetyContext::default_allow()
-        .deny(extrasafe::SystemIO)
-        .load();
+    let res = extrasafe::SafetyContext::new()
+        .apply_to_current_thread();
     assert!(res.is_ok(), "Extrasafe failed {:?}", res.unwrap_err());
 
     // try to create a file and fail
