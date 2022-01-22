@@ -17,8 +17,8 @@ fn main() {
     let res = File::create("should_fail.txt");
     assert!(res.is_err());
 
-	println!("but printing to stdout still works!");
-	eprintln!("and so does stderr!");
+    println!("but printing to stdout still works!");
+    eprintln!("and so does stderr!");
 }
 ```
 
