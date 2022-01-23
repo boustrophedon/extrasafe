@@ -6,7 +6,7 @@ The basic parts are:
 
 
 - SafetyContext
-This is the entry point. You create a SafetyContext, in which you gather rules via RuleSets, which are then used to generate seccomp rules. The seccomp filter is instantiated when `load()` is called, and cannot be removed once loaded. If the SafetyContext is created with `all_threads` instead of `this_thread()`, the `SECCOMP_FILTER_FLAG_TSYNC` attr is set, which synchronizes all threads in the process to have the same seccomp filters.
+This is the entry point. You create a SafetyContext, in which you gather rules via RuleSets, which are then used to generate seccomp rules. The seccomp filter is instantiated when `apply*()` is called, and cannot be removed once loaded. If the SafetyContext is applied with `apply_to_all_threads` instead of `apply_to_current_thread()`, the `SECCOMP_FILTER_FLAG_TSYNC` attr is set, which synchronizes all threads in the process to have the same seccomp filters.
 - RuleSet
 A trait that provides a collection of simple and conditional rules. You can think of this as a facet of a security policy, like allowing IO, network, or clock access. There are implementors provided by extrasafe and you can also define your own.
 - Rule
@@ -18,6 +18,22 @@ A single Rule may contain multiple conditions, which are anded together by libse
 
 
 One thing to note is that libseccomp will silently override conditional rules on a syscall if an unconditional one is added (in the context of extrasafe, where all filters are allow-based). extrasafe catches this and provides an error with the conflicting syscall and the names of the RuleSets that provided the rules.
+
+# Typical usage
+
+Typically you want to apply your extrasafe filters after initial startup but before getting into the main body of your program: this allows you to read config files, bind to sockets, etc. and then close off further opening of files and binding sockets, so that in the event of an exploit the surface area available to attackers is limited.
+
+## Issues
+
+### DNS and SSL
+DNS requires accessing /etc/resolv.conf and ssl typically requires opening a bunch of files to find certificates. By using `SystemIO::allow_open_readonly()` we can somewhat balance ease-of-use and security.
+
+### Network calls
+
+TODO: tcp sockets and accept, tcp clients opening connections
+
+### Threads vs processes and IPC
+TODO, threads don't give as much isolation as processes due to sharing namespace, fds, environment variables, etc.
 
 # What extrasafe actually does
 
