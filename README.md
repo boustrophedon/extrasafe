@@ -22,11 +22,13 @@ fn main() {
 }
 ```
 
-You've used safe and unsafe Rust: now your code can be extrasafe. extrasafe is a wrapper around [libseccomp](https://libseccomp.readthedocs.io/en/latest/), which uses [the Linux kernel's seccomp](https://www.kernel.org/doc/html/latest/userspace-api/seccomp_filter.html) syscall-filtering functionality to prevent your program from calling syscalls you don't need. Seccomp is used by systemd, Chrome, application sandboxes like bubblewrap and firejail, and container runtimes.
+You've used safe and unsafe Rust: now your code can be extrasafe.
+
+extrasafe is a wrapper around [libseccomp](https://libseccomp.readthedocs.io/en/latest/), which uses [the Linux kernel's seccomp](https://www.kernel.org/doc/html/latest/userspace-api/seccomp_filter.html) syscall-filtering functionality to prevent your program from calling syscalls you don't need. Seccomp is used by systemd, Chrome, application sandboxes like bubblewrap and firejail, and container runtimes.
 
 The goal of extrasafe is to make it easy to add sandboxing to your own programs without having to rely on external configuration by the person running the software.
 
-seccomp is very mildly complicated, so we provide simple defaults: Deny-by-default with pre-selected sets of syscalls to enable.
+seccomp is very mildly complicated, so we provide simple defaults that make it hard to misuse: Deny-by-default with pre-selected sets of syscalls to enable.
 
 Additionally, we support slightly advanced use-cases:
   - Allow read/write on only stdin/out/err
@@ -39,11 +41,13 @@ Additionally, we support slightly advanced use-cases:
 
 If you're developing a library to be used in other programs, you probably don't want to use extrasafe because you don't know what people who are using your library are doing. As an exeception, your library might want to use seccomp if it's spawning a worker thread whose computation is entirely controlled by your library.
 
+## Other uses
+
+You may be able to use extrasafe to help test certain edge-cases, like the network being unavailable or not being able to read files, but I think that use-case would be better served by a separate library. Email me if you're interested in this!
+
 # Why?
 
 So you can be extra safe. Suppose your program has a dependency with an undiscovered RCE lurking somewhere: extrasafe allows you to partially hedge against that by disabling access to functionality you don't need.
-
-As an example, you could avoid any potential security flaws in your your logger🙄 by running it in a separate thread and using an extrasafe RuleSet that does not allow opening sockets and only allows output to stdout or a specific, pre-determined file.
 
 ## Specific examples of vulnerabilities that could avoid exploitation with seccomp (looking for contributions!)
 

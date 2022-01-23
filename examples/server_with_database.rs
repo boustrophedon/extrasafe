@@ -1,3 +1,27 @@
+//! A fully functioning example of a web server, an on-disk database, and an http client.
+//!
+//! We start a web server thread, which in turn "opens a connection" to a database server, which is
+//! just sqlite running in another thread. The server has a /read and a /write endpoint. The write
+//! endpoint writes a message to the db, and the read endpoint returns all the messages in the db.
+//!
+//! We run two clients that write to the database, then have a third client read back the messages
+//! from it. Additionally, the read client also makes a request to a real https server to
+//! demonstrate DNS and HTTPS support.
+//!
+//! There are some things to note here: I'm using threads to make it simpler to communicate between
+//! the database and the web server, but this means that they share the same memory. If one of the
+//! components in one thread had an RCE, this means that it would effectively have the same
+//! capability as the sum of all the threads' capabilities because it could e.g. change the buffer
+//! that a thread that can write to files is using to write from.
+//!
+//! In order to get more secure sandboxing, you'd want to have each thread run in separate
+//! processes and communicate over a system IPC mechanism like pipes or local sockets. (This is
+//! what web browsers do, for example.) You could maybe also play around with using pthreads
+//! directly to pass the right flags to clone to not share memory when creating new threads, but I
+//! think you'd still have issues where if a thread can read/write files, it would be able to read
+//! its own process' binary in memory and modify it at runtime, since they would share the same
+//! pid.
+
 use extrasafe::SafetyContext;
 use extrasafe::builtins::{SystemIO, Networking, danger_zone};
 use danger_zone::{Threads, Time};
@@ -202,7 +226,7 @@ fn run_client_read() {
         // Read required to get DNS info (e.g. resolv.conf) and read ssl certificates.
         // TODO: Is there a way to do this ahead of time?
         .enable(SystemIO::nothing()
-            .allow_open()
+            .allow_open_readonly()
             .allow_read()
             .allow_metadata()
             .allow_close()).unwrap()
@@ -227,6 +251,7 @@ fn run_client_read() {
 }
 
 fn main() {
+    //  -- Spawn server
     let _server_thread = std::thread::Builder::new()
         .name("server".into())
         .spawn(run_server).unwrap();
@@ -234,7 +259,7 @@ fn main() {
     // give server time to start up
     std::thread::sleep(std::time::Duration::from_millis(100));
 
-    // -- write hello
+    // -- write "hello" to db
     let client1_thread = std::thread::Builder::new()
         .name("client1".into())
         .spawn(|| run_client_write("hello")).unwrap();
@@ -242,7 +267,7 @@ fn main() {
     let res1 = client1_thread.join();
     assert!(res1.is_ok(), "client1 failed: {:?}", res1.unwrap_err());
 
-    // -- write seccomp
+    // -- write "extrasafe" to db
     let client2_thread = std::thread::Builder::new()
         .name("client2".into())
         .spawn(|| run_client_write("extrasafe")).unwrap();
