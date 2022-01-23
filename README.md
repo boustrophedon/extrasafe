@@ -39,7 +39,7 @@ Additionally, we support slightly advanced use-cases:
 
 **Application** developers who want to tightly control what their programs can and cannot do.
 
-If you're developing a library to be used in other programs, you probably don't want to use extrasafe because you don't know what people who are using your library are doing. As an exeception, your library might want to use seccomp if it's spawning a worker thread whose computation is entirely controlled by your library.
+If you're developing a library to be used in other programs, you probably don't want to use extrasafe because you don't know what people who are using your library are doing. As an exception, your library might want to use seccomp if it's spawning a worker thread whose computation is entirely controlled by your library.
 
 ## Other uses
 
@@ -72,7 +72,7 @@ Why not both? Keep reading.
 
 ## Why not use systemd's built-in seccomp support?
 
-System supports filtering child processes' syscalls with seccomp via the `SystemCallFilter` attribute. See [e.g. this blog post](https://prefetch.net/blog/2017/11/27/securing-systemd-services-with-seccomp-profiles/) and [the systemd documentation]()
+systemd supports filtering child processes' syscalls with seccomp via the `SystemCallFilter` attribute. See [e.g. this blog post](https://prefetch.net/blog/2017/11/27/securing-systemd-services-with-seccomp-profiles/) and [the systemd documentation]()
 
 Issues:
 
@@ -93,7 +93,7 @@ In the same way, from the perspective of a developer, there's no guarantee that 
 
 ## Landlock
 
-[Landlock](https://landlock.io/) is a new LSM that [exposes an ABI via new syscalls](https://www.kernel.org/doc/html/latest/userspace-api/landlock.html) for userland developers to use, which mitigates the issues described above with regards to filtering on specific files.
+[Landlock](https://landlock.io/) is a new LSM that [exposes an ABI via new syscalls](https://www.kernel.org/doc/html/latest/userspace-api/landlock.html) for userland developers to use, which mitigates the issues described above with regards to filtering on specific filesystem paths.
 
 However, it's very new so older systems very likely don't have access to it, and it also only currently supports filesystem-related functionality.
 
