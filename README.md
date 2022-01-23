@@ -7,7 +7,7 @@ fn main() {
     println!("disabling syscalls...");
 
     extrasafe::SafetyContext::new()
-        .enable(extrasafe::SystemIO::new()
+        .enable(extrasafe::SystemIO::nothing()
             .allow_stdout()
             .allow_stderr()
    	    ).unwrap()
