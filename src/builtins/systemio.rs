@@ -8,6 +8,7 @@ use libseccomp::*;
 use syscalls::Sysno;
 
 use crate::{RuleSet, Rule};
+use super::YesReally;
 
 const IO_READ_SYSCALLS: &[Sysno] = &[Sysno::read, Sysno::readv, Sysno::preadv, Sysno::preadv2, Sysno::pread64, Sysno::lseek];
 const IO_WRITE_SYSCALLS: &[Sysno] = &[Sysno::write, Sysno::writev, Sysno::pwritev, Sysno::pwritev2, Sysno::pwrite64,
@@ -15,7 +16,7 @@ const IO_WRITE_SYSCALLS: &[Sysno] = &[Sysno::write, Sysno::writev, Sysno::pwrite
 const IO_OPEN_SYSCALLS: &[Sysno] = &[Sysno::open, Sysno::openat, Sysno::openat2];
 const IO_IOCTL_SYSCALLS: &[Sysno] = &[Sysno::ioctl, Sysno::fcntl];
 // TODO: may want to separate fd-based and filename-based?
-const IO_METADATA_SYSCALLS: &[Sysno] = &[Sysno::stat, Sysno::fstat, Sysno::newfstatat, Sysno::lstat, Sysno::statx];
+const IO_METADATA_SYSCALLS: &[Sysno] = &[Sysno::stat, Sysno::fstat, Sysno::newfstatat, Sysno::lstat, Sysno::statx, Sysno::getdents, Sysno::getdents64];
 const IO_CLOSE_SYSCALLS: &[Sysno] = &[Sysno::close, Sysno::close_range];
 
 /// A RuleSet representing syscalls that perform IO - open/close/read/write/seek/stat.
@@ -42,7 +43,7 @@ impl SystemIO {
         SystemIO::nothing()
             .allow_read()
             .allow_write()
-            .allow_open()
+            .allow_open().yes_really()
             .allow_metadata()
             .allow_close()
     }
@@ -64,8 +65,45 @@ impl SystemIO {
     }
 
     /// Allow `open` syscalls.
-    pub fn allow_open(mut self) -> SystemIO {
+    ///
+    /// # Security
+    ///
+    /// The reason this function returns a YesReally is because it's easy to accidentally combine
+    /// it with another ruleset that allows `write` - for example the Network ruleset - even if you
+    /// only want to read files.
+    pub fn allow_open(mut self) -> YesReally<SystemIO> {
         self.allowed.extend(IO_OPEN_SYSCALLS);
+
+        YesReally::new(self)
+    }
+
+    /// Allow `open` syscalls but not with write flags.
+    ///
+    /// Note that the openat2 syscall (which is not exposed by glibc anyway according to the
+    /// syscall manpage, and so probably isn't very common) is not supported here because it has a
+    /// separate configuration struct instead of a flag bitset.
+    pub fn allow_open_readonly(mut self) -> SystemIO {
+        const O_WRONLY: u64 = libc::O_WRONLY as u64;
+        const O_RDWR: u64 = libc::O_RDWR as u64;
+        const O_APPEND: u64 = libc::O_APPEND as u64;
+        const O_CREAT: u64 = libc::O_CREAT as u64;
+        const O_EXCL: u64 = libc::O_CREAT as u64;
+        const O_TMPFILE: u64 = libc::O_TMPFILE as u64;
+
+        const WRITECREATE: u64 = O_WRONLY | O_RDWR | O_APPEND | O_CREAT | O_EXCL | O_TMPFILE;
+
+        // flags are the second argument for open but the third for openat
+        let rule = Rule::new(Sysno::open)
+            .and_condition(scmp_cmp!($arg1 & WRITECREATE == 0));
+        self.custom.entry(Sysno::open)
+            .or_insert_with(Vec::new)
+            .push(rule);
+
+        let rule = Rule::new(Sysno::openat)
+            .and_condition(scmp_cmp!($arg2 & WRITECREATE == 0));
+        self.custom.entry(Sysno::openat)
+            .or_insert_with(Vec::new)
+            .push(rule);
 
         self
     }
