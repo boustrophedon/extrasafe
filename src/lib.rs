@@ -9,8 +9,8 @@
 //! extrasafe is a library that makes it easy to improve your program's security by selectively
 //! allowing the syscalls it can perform via the Linux kernel's seccomp facilities.
 //!
-//! See the SafetyContext and the tests/ and examples/ directories for more information on how to
-//! use it.
+//! See the SafetyContext struct's documentation and the tests/ and examples/ directories for more
+//! information on how to use it.
 
 use libseccomp::*;
 use thiserror::Error;
@@ -89,8 +89,9 @@ pub trait RuleSet {
 /// A struct representing a set of rules to be loaded into a seccomp filter and applied to the
 /// current thread, or all threads in the current process.
 ///
-/// Create with `this_thread()` or `all_threads()`. Add `RuleSet`s with `enable()`, and then use
-/// `load()` to apply the filters.
+/// Create with `new()`. Add `RuleSet`s with `enable()`, and then use `apply_to_current_thread()`
+/// to apply the filters to the current thread, or `apply_to_all_threads()` to apply the filter to
+/// all threads in the process.
 pub struct SafetyContext {
     /// May either be a single simple rule or multiple conditional rules, but not both.
     rules: HashMap<syscalls::Sysno, Vec<LabeledRule>>,
