@@ -1,6 +1,7 @@
 #![deny(non_ascii_idents)]
 #![deny(unsafe_code)]
 #![deny(unused_results)]
+#![allow(clippy::new_without_default)]
 // Denied in CI
 #![warn(missing_docs)]
 #![warn(trivial_casts, trivial_numeric_casts)]
