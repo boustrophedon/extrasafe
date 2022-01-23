@@ -37,8 +37,9 @@ I don't really think that's a good idea because it would be too easy to misuse d
 
 It's unfortunate but also kind of a good thing that the write syscall is used to write to both files and sockets.
 
-It means we can't enable writing both to specific files and specific socket
+It means we can't enable writing both to specific files and specific socket, which is good in the sense it encourages us to split out the parts that talk to the network and the parts that do file IO, but unfortunate in that it would be nice if we could just say "only write to these files and sockets and nothing else"
 
 ### Sidebar: how sockets work
+TODO
 
 
