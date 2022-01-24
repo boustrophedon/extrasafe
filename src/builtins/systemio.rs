@@ -16,7 +16,10 @@ const IO_WRITE_SYSCALLS: &[Sysno] = &[Sysno::write, Sysno::writev, Sysno::pwrite
 const IO_OPEN_SYSCALLS: &[Sysno] = &[Sysno::open, Sysno::openat, Sysno::openat2];
 const IO_IOCTL_SYSCALLS: &[Sysno] = &[Sysno::ioctl, Sysno::fcntl];
 // TODO: may want to separate fd-based and filename-based?
-const IO_METADATA_SYSCALLS: &[Sysno] = &[Sysno::stat, Sysno::fstat, Sysno::newfstatat, Sysno::lstat, Sysno::statx, Sysno::getdents, Sysno::getdents64];
+const IO_METADATA_SYSCALLS: &[Sysno] = &[Sysno::stat, Sysno::fstat, Sysno::newfstatat,
+                                         Sysno::lstat, Sysno::statx,
+                                         Sysno::getdents, Sysno::getdents64,
+                                         Sysno::getcwd];
 const IO_CLOSE_SYSCALLS: &[Sysno] = &[Sysno::close, Sysno::close_range];
 
 /// A RuleSet representing syscalls that perform IO - open/close/read/write/seek/stat.
@@ -87,10 +90,14 @@ impl SystemIO {
         const O_RDWR: u64 = libc::O_RDWR as u64;
         const O_APPEND: u64 = libc::O_APPEND as u64;
         const O_CREAT: u64 = libc::O_CREAT as u64;
-        const O_EXCL: u64 = libc::O_CREAT as u64;
-        const O_TMPFILE: u64 = libc::O_TMPFILE as u64;
+        const O_EXCL: u64 = libc::O_EXCL as u64;
+        // TMPFILE causes problems because it's defined as __O_TMPFILE | O_DIRECTORY
+        // i.e. just the tmpfile bit or the o_directory bit. O_DIRECTORY by itself is fine because
+        // it just causse the open to fail if it's a directory. however the manpage states that
+        // WRONLY or RDWR is required for O_TMPFILE so we're fine to leave it out anyway.
+        // const O_TMPFILE: u64 = libc::O_TMPFILE as u64;
 
-        const WRITECREATE: u64 = O_WRONLY | O_RDWR | O_APPEND | O_CREAT | O_EXCL | O_TMPFILE;
+        const WRITECREATE: u64 = O_WRONLY | O_RDWR | O_APPEND | O_CREAT | O_EXCL;// | O_TMPFILE;
 
         // flags are the second argument for open but the third for openat
         let rule = Rule::new(Sysno::open)
