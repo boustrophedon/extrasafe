@@ -34,7 +34,8 @@ fn test_udp() {
         .enable(Networking::nothing()
             .allow_running_udp_sockets()
         ).unwrap()
-        .enable(Threads).unwrap()
+        .enable(Threads::nothing()
+            .allow_create()).unwrap()
         .apply_to_current_thread()
         .unwrap();
 
@@ -87,7 +88,8 @@ fn test_tcp() {
         .enable(Networking::nothing()
             .allow_running_tcp_clients()
         ).unwrap()
-        .enable(Threads).unwrap()
+        .enable(Threads::nothing()
+            .allow_create()).unwrap()
         .apply_to_current_thread()
         .unwrap();
 

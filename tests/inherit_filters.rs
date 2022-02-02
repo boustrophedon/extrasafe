@@ -8,7 +8,8 @@ use extrasafe::builtins::danger_zone::{ForkAndExec, Threads};
 /// it fails.
 fn new_thread_inherits_restrictions() {
     SafetyContext::new()
-        .enable(Threads)
+        .enable(Threads::nothing()
+            .allow_create())
         .unwrap()
         .apply_to_current_thread()
         .unwrap();

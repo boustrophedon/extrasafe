@@ -23,8 +23,7 @@
 //! pid.
 
 use extrasafe::SafetyContext;
-use extrasafe::builtins::{SystemIO, Networking, danger_zone};
-use danger_zone::{Threads, Time};
+use extrasafe::builtins::{SystemIO, Networking, danger_zone::Threads};
 
 use crossbeam::channel;
 use crossbeam_queue::SegQueue;
@@ -145,8 +144,8 @@ fn run_db(queue: DbConn) {
             .allow_metadata()
             .allow_ioctl()
             .allow_close()).unwrap()
-        .enable(Time::nothing()
-            .allow_sleep()).unwrap()
+        .enable(Threads::nothing()
+            .allow_sleep().yes_really()).unwrap()
         .apply_to_current_thread()
         .unwrap();
 
@@ -222,7 +221,8 @@ fn run_client_read() {
             .allow_start_tcp_clients()).unwrap()
         // For some reason only if we make two requests with a client does it use multiple threads,
         // so we only need them in the reader thread rather than the writer.
-        .enable(Threads).unwrap()
+        .enable(Threads::nothing()
+            .allow_create()).unwrap()
         // Read required to get DNS info (e.g. resolv.conf) and read ssl certificates.
         // TODO: Is there a way to do this ahead of time?
         .enable(SystemIO::nothing()

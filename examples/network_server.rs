@@ -89,7 +89,8 @@ fn main() {
             .allow_running_tcp_servers()
             .allow_start_tcp_clients()
         ).unwrap()
-        .enable(Threads).unwrap()
+        .enable(Threads::nothing()
+            .allow_create()).unwrap()
         .apply_to_all_threads()
         .unwrap();
 

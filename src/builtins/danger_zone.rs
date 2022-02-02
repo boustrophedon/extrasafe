@@ -12,18 +12,48 @@ use super::YesReally;
 // const CLONE_PARENT: u64 = libc::CLONE_PARENT as u64;
 // const CLONE_THREAD: u64 = libc::CLONE_THREAD as u64;
 
-/// Allows just the `clone` syscall.
+/// Allows `clone` and `sleep` syscalls, which allow creating new threads and processes, and
+/// pausing them.
 ///
 /// # Security
 /// This is in the danger zone not because it's dangerous but because it can be misused: Threads
 /// do not provide isolation from each other. You can still access other threads' memory and
 /// potentially get them to do operations that are not allowed in the current thread's seccomp
 /// context.
-pub struct Threads;
+pub struct Threads {
+    allowed: HashSet<Sysno>,
+}
+
+impl Threads {
+    /// Create a new Threads ruleset with nothing allowed by default.
+    pub fn nothing() -> Threads {
+        Threads {
+            allowed: HashSet::new(),
+        }
+    }
+
+    /// Allow creating new threads and processes.
+    pub fn allow_create(mut self) -> Threads {
+        self.allowed.extend([Sysno::clone, Sysno::clone3]);
+
+        self
+    }
+
+    /// Allow sleeping on the current thread
+    ///
+    /// # Security considerations
+    /// An attacker with arbitrary code execution and access to a high resolution timer can mount
+    /// timing attacks (e.g. spectre).
+    pub fn allow_sleep(mut self) -> YesReally<Threads> {
+        self.allowed.extend([Sysno::clock_nanosleep, Sysno::nanosleep]);
+
+        YesReally::new(self)
+    }
+}
 
 impl RuleSet for Threads {
     fn simple_rules(&self) -> Vec<Sysno> {
-        vec![Sysno::clone, Sysno::clone3]
+        self.allowed.iter().copied().collect()
     }
 
     fn conditional_rules(&self) -> HashMap<Sysno, Vec<Rule>> {
@@ -126,13 +156,6 @@ impl Time {
         self
     }
 
-    /// Allows you to put the current thread to sleep.
-    pub fn allow_sleep(mut self) -> Time {
-        // TODO: maybe just move this into basic? or threading?
-        self.allowed.extend([Sysno::clock_nanosleep, Sysno::nanosleep]);
-
-        self
-    }
 }
 
 impl RuleSet for Time {
