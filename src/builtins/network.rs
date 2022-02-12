@@ -7,6 +7,8 @@ use syscalls::Sysno;
 use crate::{RuleSet, Rule};
 use super::YesReally;
 
+// TODO: make bind calls conditional on the DGRAM/UNIX/STREAM flag in each function
+
 // TODO: add io_uring
 const NET_IO_SYSCALLS: &[Sysno] = &[
     Sysno::epoll_create, Sysno::epoll_create1,
@@ -105,6 +107,7 @@ impl Networking {
     /// Allow a running UDP server to continue running. Does not allow `socket` or `bind` to
     /// prevent new sockets from being created.
     pub fn allow_running_udp_sockets(mut self) -> Networking {
+        self.allowed.extend(NET_IO_SYSCALLS);
         self.allowed.extend(NET_READ_SYSCALLS);
         self.allowed.extend(NET_WRITE_SYSCALLS);
 
@@ -145,6 +148,43 @@ impl Networking {
     ///
     /// This is technically the same as `allow_running_tcp_servers`.
     pub fn allow_running_tcp_clients(mut self) -> Networking {
+        self.allowed.extend(NET_IO_SYSCALLS);
+        self.allowed.extend(NET_READ_SYSCALLS);
+        self.allowed.extend(NET_WRITE_SYSCALLS);
+
+        self
+    }
+
+    /// Allow starting new Unix domain servers
+    ///
+    /// # Security Notes
+    ///
+    /// You probably don't need to use this. In most cases you can just run your server and then
+    /// use `allow_running_server`.
+    pub fn allow_start_unix_server(mut self) -> YesReally<Networking> {
+        self.allowed.extend(NET_CREATE_SERVER_SYSCALLS);
+        self.allowed.extend(NET_IO_SYSCALLS);
+        self.allowed.extend(NET_READ_SYSCALLS);
+        self.allowed.extend(NET_WRITE_SYSCALLS);
+
+        YesReally::new(self)
+    }
+
+    /// Allow a running Unix server to continue running. Does not allow `socket` or `bind` to
+    /// prevent new sockets from being created.
+    pub fn allow_running_unix_servers(mut self) -> Networking {
+        self.allowed.extend(NET_IO_SYSCALLS);
+        self.allowed.extend(NET_READ_SYSCALLS);
+        self.allowed.extend(NET_WRITE_SYSCALLS);
+
+        self
+    }
+
+    /// Allow a running Unix socket client to continue running. Does not allow `socket` or `connect` to
+    /// prevent new sockets from being created.
+    ///
+    /// This is technically the same as `allow_running_unix_servers`.
+    pub fn allow_running_unix_clients(mut self) -> Networking {
         self.allowed.extend(NET_IO_SYSCALLS);
         self.allowed.extend(NET_READ_SYSCALLS);
         self.allowed.extend(NET_WRITE_SYSCALLS);
