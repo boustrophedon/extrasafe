@@ -41,6 +41,8 @@ Additionally, we support slightly advanced use-cases:
 
 If you're developing a library to be used in other programs, you probably don't want to use extrasafe because you don't know what people who are using your library are doing. As an exception, your library might want to use seccomp if it's spawning a worker thread whose computation is entirely controlled by your library.
 
+**Currently extrasafe only supports `x86_64`. If you'd like to help support other archs please open an issue.**
+
 ## Other uses
 
 You may be able to use extrasafe to help test certain edge-cases, like the network being unavailable or not being able to read files, but I think that use-case would be better served by a separate library. Email me if you're interested in this!

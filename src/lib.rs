@@ -101,6 +101,12 @@ impl SafetyContext {
     /// Create a new SafetyContext. The seccomp filters will not be loaded until either
     /// `apply_to_current_thread` or `apply_to_all_threads` is called.
     pub fn new() -> SafetyContext {
+
+        #[cfg(not(target_arch = "x86_64"))]
+        {
+            compile_error!("Extrasafe currently only supports the x86_64 architecture. You will likely see other errors about Sysno enum variants not existing; this is why.");
+        }
+
         SafetyContext {
             rules: HashMap::new(),
         }
