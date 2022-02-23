@@ -1,4 +1,7 @@
-use extrasafe::{SafetyContext, builtins::{Networking, danger_zone::Threads}};
+use extrasafe::{
+    builtins::{danger_zone::Threads, Networking},
+    SafetyContext,
+};
 
 use warp::Filter;
 
@@ -17,7 +20,7 @@ fn main() {
     // let fd = listener.as_raw_fd();
     // // then make SafetyContext here, and inside the Networking have an
     // // .allow_socket(fd)
-    // 
+    //
     // // then set up warp server via hyper. There might be a better way to do this?
     // // from https://docs.rs/warp/latest/warp/fn.service.html
     // let route = warp::any().map(|| "Hello world");
@@ -70,12 +73,11 @@ fn main() {
     // enable it. This is almost the same effect as SystemIO::allow_fd() but without the conditionals
     // on recvfrom/write.
 
-
-
     let _server_thread = thread::spawn(|| {
         let runtime = tokio::runtime::Builder::new_current_thread()
             .enable_all()
-            .build().unwrap();
+            .build()
+            .unwrap();
         let routes = warp::any().map(|| "hello seccomp");
         let server = warp::serve(routes).run(([127, 0, 0, 1], 3030));
         runtime.block_on(server);
@@ -97,16 +99,20 @@ fn main() {
     // create a tokio runtime in this thread
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
-        .build().unwrap();
+        .build()
+        .unwrap();
 
     println!("making request to local server...");
     let res = runtime.block_on(reqwest::get("http://127.0.0.1:3030"));
-    assert!(res.is_ok(), "Error getting reply from server: {:?}", res.unwrap_err());
+    assert!(
+        res.is_ok(),
+        "Error getting reply from server: {:?}",
+        res.unwrap_err()
+    );
 
     let text = runtime.block_on(res.unwrap().text()).unwrap();
     assert_eq!(text, "hello seccomp");
     println!("recieved response: {}", text);
-
 
     // Now see we fail to bind a new server.
     let res = std::net::TcpListener::bind("127.0.0.1:3031");

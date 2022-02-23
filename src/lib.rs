@@ -52,7 +52,6 @@ impl Rule {
 /// A Rule labeled with the profile it originated from. Internal-only.
 struct LabeledRule(pub &'static str, pub Rule);
 
-
 /// A RuleSet is a collection of seccomp Rules that enable a functionality.
 pub trait RuleSet {
     /// A simple rule is one that uses `add_rule` i.e. it just allows the syscall without
@@ -101,7 +100,6 @@ impl SafetyContext {
     /// Create a new SafetyContext. The seccomp filters will not be loaded until either
     /// `apply_to_current_thread` or `apply_to_all_threads` is called.
     pub fn new() -> SafetyContext {
-
         #[cfg(not(target_arch = "x86_64"))]
         {
             compile_error!("Extrasafe currently only supports the x86_64 architecture. You will likely see other errors about Sysno enum variants not existing; this is why.");
@@ -117,7 +115,9 @@ impl SafetyContext {
         // Note that we can't do this check in each individual gather_rules because different
         // policies may enable the same syscall.
 
-        let new_rules = policy.gather_rules().into_iter()
+        let new_rules = policy
+            .gather_rules()
+            .into_iter()
             .map(|rule| LabeledRule(policy.name(), rule));
 
         for labeled_new_rule in new_rules {
@@ -133,23 +133,28 @@ impl SafetyContext {
                     let same_syscall = new_rule.syscall == existing_rule.syscall;
 
                     if same_syscall && new_is_simple && !existing_is_simple {
-                        return Err(ExtraSafeError::SimpleOverrideError(new_rule.syscall,
-                                labeled_new_rule.0,
-                                labeled_existing_rule.0));
+                        return Err(ExtraSafeError::SimpleOverrideError(
+                            new_rule.syscall,
+                            labeled_new_rule.0,
+                            labeled_existing_rule.0,
+                        ));
                     }
                     if same_syscall && !new_is_simple && existing_is_simple {
-                        return Err(ExtraSafeError::ConditionalNoEffectError(new_rule.syscall,
-                                labeled_new_rule.0,
-                                labeled_existing_rule.0));
+                        return Err(ExtraSafeError::ConditionalNoEffectError(
+                            new_rule.syscall,
+                            labeled_new_rule.0,
+                            labeled_existing_rule.0,
+                        ));
                     }
                 }
             }
 
-            self.rules.entry(*syscall)
+            self.rules
+                .entry(*syscall)
                 .or_insert_with(Vec::new)
                 .push(labeled_new_rule);
         }
-            
+
         Ok(self)
     }
 
@@ -166,7 +171,6 @@ impl SafetyContext {
     }
 
     fn apply(mut self, all_threads: bool) -> Result<(), ExtraSafeError> {
-
         // This guard will not currently ever be hit because libseccomp-rs will fail to build
         // before we get here. If we ever move off of it or if libseccomp-rs decides to do a
         // no-op build on non-linux platform, having this guard here means end users will still
@@ -203,7 +207,6 @@ impl SafetyContext {
     }
 }
 
-
 #[derive(Debug, Error)]
 /// The error type produced by extrasafe::SafetyContext
 pub enum ExtraSafeError {
@@ -218,5 +221,5 @@ pub enum ExtraSafeError {
     SimpleOverrideError(syscalls::Sysno, &'static str, &'static str),
     #[error("A libseccomp error occured. {0:?}")]
     /// An error from the underlying seccomp library.
-    SeccompError(#[from] libseccomp::error::SeccompError)
+    SeccompError(#[from] libseccomp::error::SeccompError),
 }

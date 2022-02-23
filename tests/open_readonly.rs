@@ -1,5 +1,5 @@
-use extrasafe::*;
 use extrasafe::builtins::SystemIO;
+use extrasafe::*;
 
 use std::fs::{File, OpenOptions};
 
@@ -22,32 +22,55 @@ fn allow_open_readonly() {
     // Enable safetycontext
 
     SafetyContext::new()
-        .enable(SystemIO::nothing()
-            .allow_open_readonly()
-            .allow_read()
-            .allow_metadata()
-            .allow_close()).unwrap()
-        .apply_to_current_thread().unwrap();
+        .enable(
+            SystemIO::nothing()
+                .allow_open_readonly()
+                .allow_read()
+                .allow_metadata()
+                .allow_close(),
+        )
+        .unwrap()
+        .apply_to_current_thread()
+        .unwrap();
 
     // Try to open for writing and fail
     let res = OpenOptions::new().read(true).write(true).open(&path);
-    assert!(res.is_err(), "Successfully opened file for writing incorrectly");
+    assert!(
+        res.is_err(),
+        "Successfully opened file for writing incorrectly"
+    );
 
     // Try to open for append and fail
     let res = OpenOptions::new().read(true).append(true).open(&path);
-    assert!(res.is_err(), "Successfully opened file for append incorrectly");
+    assert!(
+        res.is_err(),
+        "Successfully opened file for append incorrectly"
+    );
 
     // Try to open for create and fail
     let res = OpenOptions::new().read(true).create(true).open(&path);
-    assert!(res.is_err(), "Successfully opened file with create incorrectly");
+    assert!(
+        res.is_err(),
+        "Successfully opened file with create incorrectly"
+    );
 
     // Try to open for create_new and fail
     let mut new_path = dir.path().to_path_buf();
     new_path.push("new_path.txt");
-    let res = OpenOptions::new().read(true).create_new(true).open(&new_path);
-    assert!(res.is_err(), "Successfully opened file with create_new incorrectly");
+    let res = OpenOptions::new()
+        .read(true)
+        .create_new(true)
+        .open(&new_path);
+    assert!(
+        res.is_err(),
+        "Successfully opened file with create_new incorrectly"
+    );
 
     // open for read only and succeed
     let res = OpenOptions::new().read(true).write(false).open(&path);
-    assert!(res.is_ok(), "Failed to open file for reading: {:?}", res.unwrap_err());
+    assert!(
+        res.is_ok(),
+        "Failed to open file for reading: {:?}",
+        res.unwrap_err()
+    );
 }

@@ -5,7 +5,7 @@ use std::collections::{HashMap, HashSet};
 //use libseccomp::scmp_cmp;
 use syscalls::Sysno;
 
-use crate::{RuleSet, Rule};
+use crate::{Rule, RuleSet};
 
 use super::YesReally;
 
@@ -45,7 +45,8 @@ impl Threads {
     /// An attacker with arbitrary code execution and access to a high resolution timer can mount
     /// timing attacks (e.g. spectre).
     pub fn allow_sleep(mut self) -> YesReally<Threads> {
-        self.allowed.extend([Sysno::clock_nanosleep, Sysno::nanosleep]);
+        self.allowed
+            .extend([Sysno::clock_nanosleep, Sysno::nanosleep]);
 
         YesReally::new(self)
     }
@@ -112,7 +113,7 @@ impl RuleSet for ForkAndExec {
         // custom.entry(Sysno::clone3)
         //     .or_insert_with(Vec::new)
         //     .push(clone3);
-        // 
+        //
         // custom
         HashMap::new()
     }
@@ -142,7 +143,8 @@ impl Time {
 
     /// Allows you to set the system time. You really probably don't need this.
     pub fn allow_settime(mut self) -> YesReally<Time> {
-        self.allowed.extend([Sysno::clock_settime, Sysno::clock_adjtime]);
+        self.allowed
+            .extend([Sysno::clock_settime, Sysno::clock_adjtime]);
 
         YesReally::new(self)
     }
@@ -151,11 +153,11 @@ impl Time {
     /// the time functions together, and also technically highres timers can be used for timing
     /// attacks (but a determined attacker can use other methods besides just calling gettime).
     pub fn allow_gettime(mut self) -> Time {
-        self.allowed.extend([Sysno::clock_gettime, Sysno::clock_getres]);
+        self.allowed
+            .extend([Sysno::clock_gettime, Sysno::clock_getres]);
 
         self
     }
-
 }
 
 impl RuleSet for Time {
@@ -171,4 +173,3 @@ impl RuleSet for Time {
         "Time"
     }
 }
-

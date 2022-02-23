@@ -39,13 +39,17 @@ fn filter_stacking_works_but_may_give_unintended_results() {
             .allow_create()
         ).unwrap()
         .apply_to_current_thread();
-    assert!(res.is_ok(), "Loading another seccomp filter after the first failed: {}", res.unwrap_err());
+    assert!(
+        res.is_ok(),
+        "Loading another seccomp filter after the first failed: {}",
+        res.unwrap_err()
+    );
 
     println!("test");
     let res = std::thread::Builder::new()
         .spawn(|| println!("will not run"));
     assert!(res.is_err(), "Even though clone was enabled on the second filter, it was not in the first and so isn't allowed.");
-    
+
     let res = std::fs::File::open("will_not_be_opened.txt");
     assert!(res.is_err(), "Even though opening files was enabled on the first filter, it was not in the second and so isn't allowed.");
 }

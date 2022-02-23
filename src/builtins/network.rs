@@ -1,11 +1,11 @@
 //! Contains a RuleSet for allowing networking-related syscalls.
 
-use std::collections::{HashSet, HashMap};
+use std::collections::{HashMap, HashSet};
 
 use syscalls::Sysno;
 
-use crate::{RuleSet, Rule};
 use super::YesReally;
+use crate::{Rule, RuleSet};
 
 // TODO: make bind calls conditional on the DGRAM/UNIX/STREAM flag in each function
 
@@ -41,15 +41,14 @@ const NET_WRITE_SYSCALLS: &[Sysno] = &[Sysno::sendto, Sysno::sendmsg, Sysno::sen
 const NET_CREATE_SERVER_SYSCALLS: &[Sysno] = &[Sysno::socket, Sysno::bind];
 const NET_CREATE_CLIENT_SYSCALLS: &[Sysno] = &[Sysno::socket, Sysno::connect];
 
-
 /// A RuleSet representing syscalls that perform network operations - accept/listen/bind/connect etc.
 ///
 /// # How to use
-/// 
+///
 /// 1. Select TCP or UDP (or both) with `enable_tcp()`, `enable_udp()`
 /// 2a. If you are a server of some sort, **strongly** consider first binding to your ports and
 ///     then not allowing further binds by using `running_tcp_server()` or `running_udp_server()`.
-///     Otherwise, 
+///     Otherwise,
 /// 2b. If you are a client, use `tcp_client()` and/or `udp_client()`, which does not allow
 ///     `accept` or `listen` syscalls.
 /// The most common use-case: select TCP or UDP (or both) with `.enable_tcp()` or `.enable_udp()`,

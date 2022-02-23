@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::io::Write;
 
-use tempfile::{tempfile, tempdir};
+use tempfile::{tempdir, tempfile};
 
 // NOTE: probably issues with running cargo test with --num-threads 1
 
@@ -28,7 +28,12 @@ fn filesystem_no_read() {
     assert!(res.is_err(), "opening file succeeded erroneously");
 
     let err = res.unwrap_err();
-    assert_eq!(err.kind(), std::io::ErrorKind::PermissionDenied, "Error is not EPERM {:?}", err);
+    assert_eq!(
+        err.kind(),
+        std::io::ErrorKind::PermissionDenied,
+        "Error is not EPERM {:?}",
+        err
+    );
 }
 
 #[test]
@@ -47,7 +52,12 @@ fn filesystem_no_write() {
     assert!(res.is_err(), "writing file succeeded erroneously");
 
     let err = res.unwrap_err();
-    assert_eq!(err.kind(), std::io::ErrorKind::PermissionDenied, "Error is not EPERM {:?}", err);
+    assert_eq!(
+        err.kind(),
+        std::io::ErrorKind::PermissionDenied,
+        "Error is not EPERM {:?}",
+        err
+    );
 }
 
 #[test]
@@ -69,5 +79,10 @@ fn filesystem_no_create() {
     assert!(res.is_err(), "creating file succeeded erroneously");
 
     let err = res.unwrap_err();
-    assert_eq!(err.kind(), std::io::ErrorKind::PermissionDenied, "Error is not EPERM {:?}", err);
+    assert_eq!(
+        err.kind(),
+        std::io::ErrorKind::PermissionDenied,
+        "Error is not EPERM {:?}",
+        err
+    );
 }

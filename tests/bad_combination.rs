@@ -1,5 +1,5 @@
-use extrasafe::*;
 use extrasafe::builtins::SystemIO;
+use extrasafe::*;
 use syscalls::Sysno;
 
 use std::collections::HashMap;
@@ -28,7 +28,10 @@ fn invalid_combination_new_simple() {
             .allow_stdout()).unwrap()
         .enable(SystemIO::everything());
 
-    assert!(res.is_err(), "Extrasafe didn't fail when adding conflicting rules");
+    assert!(
+        res.is_err(),
+        "Extrasafe didn't fail when adding conflicting rules"
+    );
 
     let err = res.unwrap_err();
     assert_eq!(err.to_string(), "New simple rule on syscall `write` from RuleSet `SystemIO` would override existing conditional rule from RuleSet `SystemIO`.");
@@ -53,7 +56,10 @@ fn invalid_combination_new_simple_different_name() {
         .enable(SystemIO::nothing()
             .allow_stdout()).unwrap()
         .enable(JustWrite);
-    assert!(res.is_err(), "Extrasafe didn't fail when adding conflicting rules");
+    assert!(
+        res.is_err(),
+        "Extrasafe didn't fail when adding conflicting rules"
+    );
 
     let err = res.unwrap_err();
     assert_eq!(err.to_string(), "New simple rule on syscall `write` from RuleSet `JustWrite` would override existing conditional rule from RuleSet `SystemIO`.");

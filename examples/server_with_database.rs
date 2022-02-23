@@ -22,8 +22,8 @@
 //! its own process' binary in memory and modify it at runtime, since they would share the same
 //! pid.
 
+use extrasafe::builtins::{danger_zone::Threads, Networking, SystemIO};
 use extrasafe::SafetyContext;
-use extrasafe::builtins::{SystemIO, Networking, danger_zone::Threads};
 
 use crossbeam::channel;
 use crossbeam_queue::SegQueue;
@@ -42,7 +42,9 @@ enum DBMsg {
 
 type DbConn = Arc<SegQueue<DBMsg>>;
 
-fn with_db(db: DbConn) -> impl Filter<Extract = (DbConn,), Error = std::convert::Infallible> + Clone {
+fn with_db(
+    db: DbConn,
+) -> impl Filter<Extract = (DbConn,), Error = std::convert::Infallible> + Clone {
     warp::any().map(move || db.clone())
 }
 
@@ -67,14 +69,12 @@ fn run_server() {
         .build().unwrap();
     let listener = std::net::TcpListener::bind("127.0.0.1:5575").unwrap();
 
-
     // extrasafe context
     SafetyContext::new()
         .enable(Networking::nothing()
             .allow_running_tcp_servers()).unwrap()
         .apply_to_current_thread()
         .unwrap();
-
 
     // set up server routes
     let routes = warp::path("write")
@@ -104,9 +104,7 @@ fn run_server() {
     let svc = warp::service(routes);
     let make_svc = hyper::service::make_service_fn(move |_| {
         let warp_svc = svc.clone();
-        async move {
-            Ok::<_, std::convert::Infallible>(warp_svc)
-        }
+        async move { Ok::<_, std::convert::Infallible>(warp_svc) }
     });
 
     // https://docs.rs/tokio/latest/tokio/net/struct.TcpListener.html#method.from_std
@@ -163,16 +161,17 @@ fn run_db(queue: DbConn) {
 
         match msg {
             DBMsg::List(send) => {
-                let messages: Vec<String> = get_rows.query_map([], |row| row.get(0))
+                let messages: Vec<String> = get_rows
+                    .query_map([], |row| row.get(0))
                     .unwrap()
                     .map(|r| r.unwrap())
                     .collect();
 
                 send.send(messages).unwrap();
-            },
+            }
             DBMsg::Write(s) => {
                 insert_row.execute([s]).unwrap();
-            },
+            }
         }
     }
 }
@@ -197,8 +196,16 @@ fn run_client_write(msg: &str) {
     runtime.block_on(async {
         let client = reqwest::Client::new();
 
-        let res = client.post("http://127.0.0.1:5575/write").body(msg).send().await;
-        assert!(res.is_ok(), "Error writing to server db: {:?}", res.unwrap_err());
+        let res = client
+            .post("http://127.0.0.1:5575/write")
+            .body(msg)
+            .send()
+            .await;
+        assert!(
+            res.is_ok(),
+            "Error writing to server db: {:?}",
+            res.unwrap_err()
+        );
 
         let text = res.unwrap().text().await.unwrap();
         assert_eq!(text, "ok");
@@ -225,24 +232,35 @@ fn run_client_read() {
             .allow_create()).unwrap()
         // Read required to get DNS info (e.g. resolv.conf) and read ssl certificates.
         // TODO: Is there a way to do this ahead of time?
-        .enable(SystemIO::nothing()
-            .allow_open_readonly()
-            .allow_read()
-            .allow_metadata()
-            .allow_close()).unwrap()
+        .enable(
+            SystemIO::nothing()
+                .allow_open_readonly()
+                .allow_read()
+                .allow_metadata()
+                .allow_close(),
+        )
+        .unwrap()
         .apply_to_current_thread()
         .unwrap();
 
     // make request
-    runtime.block_on( async {
+    runtime.block_on(async {
         // Show that we can resolve dns and do ssl. Data returned isn't checked or used anywhere,
         // we just get it.
         let resp = client.get("https://example.org/").send().await.unwrap();
         let res = resp.text().await;
-        assert!(res.is_ok(), "failed getting example.org response: {:?}", res.unwrap_err());
+        assert!(
+            res.is_ok(),
+            "failed getting example.org response: {:?}",
+            res.unwrap_err()
+        );
 
         let res = client.get("http://127.0.0.1:5575/read").send().await;
-        assert!(res.is_ok(), "Error reading from server db: {:?}", res.unwrap_err());
+        assert!(
+            res.is_ok(),
+            "Error reading from server db: {:?}",
+            res.unwrap_err()
+        );
 
         let text = res.unwrap().text().await.unwrap();
         assert_eq!(text, "hello\nextrasafe");

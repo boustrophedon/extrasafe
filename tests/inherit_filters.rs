@@ -17,13 +17,17 @@ fn new_thread_inherits_restrictions() {
     let handle = std::thread::spawn(|| {
         let res = std::fs::File::create("/tmp/will_not_work.txt");
         assert!(res.is_err(), "Incorrectly succeeded in creating file");
-        
+
         let err = res.unwrap_err();
         assert_eq!(err.kind(), std::io::ErrorKind::PermissionDenied);
     });
 
     let res = handle.join();
-    assert!(res.is_ok(), "Error during file io test thread: {:?}", res.unwrap_err());
+    assert!(
+        res.is_ok(),
+        "Error during file io test thread: {:?}",
+        res.unwrap_err()
+    );
 }
 
 #[test]
@@ -39,7 +43,11 @@ fn new_process_inherits_restrictions() {
     let res = std::process::Command::new("cat")
         .arg("/proc/cpuinfo")
         .status();
-    assert!(res.is_ok(), "Error spawning child process: {:?}", res.unwrap_err());
+    assert!(
+        res.is_ok(),
+        "Error spawning child process: {:?}",
+        res.unwrap_err()
+    );
 
     let status = res.unwrap();
     assert!(!status.success(), "Child process suceeded incorrectly.");

@@ -1,10 +1,9 @@
 use extrasafe::builtins::SystemIO;
 
-use std::thread;
 use std::sync::mpsc::sync_channel;
+use std::thread;
 
 use std::fs::File;
-
 
 #[test]
 /// Test TSYNC behavior by enabling on one thread and failing IO on another.
@@ -37,7 +36,10 @@ fn sync_thread_contexts() {
         path.push("can_open.txt");
 
         let res = File::create(&path);
-        assert!(res.is_err(), "Incorrectly succeeded in opening file after seccomp was loaded on other thread");
+        assert!(
+            res.is_err(),
+            "Incorrectly succeeded in opening file after seccomp was loaded on other thread"
+        );
 
         // io_test_passed
         sender2.send(()).unwrap();
@@ -45,7 +47,15 @@ fn sync_thread_contexts() {
     });
 
     let seccomp_res = seccomp_thread.join();
-    assert!(seccomp_res.is_ok(), "seccomp thread failed: {:?}", seccomp_res.unwrap_err());
+    assert!(
+        seccomp_res.is_ok(),
+        "seccomp thread failed: {:?}",
+        seccomp_res.unwrap_err()
+    );
     let io_res = io_thread.join();
-    assert!(io_res.is_ok(), "io thread failed: {:?}", io_res.unwrap_err());
+    assert!(
+        io_res.is_ok(),
+        "io thread failed: {:?}",
+        io_res.unwrap_err()
+    );
 }

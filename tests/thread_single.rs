@@ -4,11 +4,10 @@
 // TODO we should write a test showing that seccomp filters don't override filters in
 // different threads as documentation.
 
-
 use extrasafe::builtins::SystemIO;
 
-use std::thread;
 use std::sync::mpsc::sync_channel;
+use std::thread;
 
 use std::fs::File;
 
@@ -45,7 +44,10 @@ fn different_threads_with_different_contexts() {
         path.push("can_open.txt");
 
         let res = File::create(&path);
-        assert!(res.is_ok(), "Failed to open file even though there's no seccomp filter loaded in this thread.");
+        assert!(
+            res.is_ok(),
+            "Failed to open file even though there's no seccomp filter loaded in this thread."
+        );
 
         // io_test_passed
         sender2.send(()).unwrap();
@@ -53,7 +55,15 @@ fn different_threads_with_different_contexts() {
     });
 
     let seccomp_res = seccomp_thread.join();
-    assert!(seccomp_res.is_ok(), "seccomp thread failed: {:?}", seccomp_res.unwrap_err());
+    assert!(
+        seccomp_res.is_ok(),
+        "seccomp thread failed: {:?}",
+        seccomp_res.unwrap_err()
+    );
     let io_res = io_thread.join();
-    assert!(io_res.is_ok(), "io thread failed: {:?}", io_res.unwrap_err());
+    assert!(
+        io_res.is_ok(),
+        "io thread failed: {:?}",
+        io_res.unwrap_err()
+    );
 }

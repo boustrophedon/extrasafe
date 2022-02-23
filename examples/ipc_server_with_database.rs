@@ -9,15 +9,15 @@
 //! from it. Additionally, the read client also makes a request to a real https server to
 //! demonstrate DNS and HTTPS support.
 
+use extrasafe::builtins::{danger_zone::Threads, Networking, SystemIO};
 use extrasafe::SafetyContext;
-use extrasafe::builtins::{SystemIO, Networking, danger_zone::Threads};
 
 use std::io::prelude::*;
 
 use warp::Filter;
 
-use std::os::unix::process::CommandExt;
 use std::os::unix::net::{UnixListener, UnixStream};
+use std::os::unix::process::CommandExt;
 
 use std::sync::{Arc, Mutex};
 
@@ -31,7 +31,6 @@ enum DBMsg {
 
 type DbConn = Arc<Mutex<UnixStream>>;
 
-
 fn run_subprocess(cmd: &[&str]) -> std::process::Child {
     let exe_path = std::env::current_exe().unwrap();
 
@@ -42,7 +41,9 @@ fn run_subprocess(cmd: &[&str]) -> std::process::Child {
         .expect(&format!("subcommand `{}` failed to start", cmd.join(" ")))
 }
 
-fn with_db(db: DbConn) -> impl Filter<Extract = (DbConn,), Error = std::convert::Infallible> + Clone {
+fn with_db(
+    db: DbConn,
+) -> impl Filter<Extract = (DbConn,), Error = std::convert::Infallible> + Clone {
     warp::any().map(move || db.clone())
 }
 
@@ -53,7 +54,6 @@ fn run_webserver(db_socket_path: &str) {
     println!("webserver thread connecting to db unix socket");
     let socket = UnixStream::connect(db_socket_path).expect("failed to connect to db socket");
     let db_socket: DbConn = Arc::new(Mutex::new(socket));
-
 
     // set up runtime
     let runtime = tokio::runtime::Builder::new_current_thread()
@@ -68,7 +68,6 @@ fn run_webserver(db_socket_path: &str) {
         .apply_to_current_thread()
         .unwrap();
 
-
     // set up server routes
     let routes = warp::path("write")
         .and(warp::post())
@@ -79,7 +78,8 @@ fn run_webserver(db_socket_path: &str) {
             let mut conn = db_conn.lock().unwrap();
 
             let s = std::str::from_utf8(&param).unwrap();
-            conn.write_all(format!("write {}", s).as_bytes()).expect("failed to send write message to db");
+            conn.write_all(format!("write {}", s).as_bytes())
+                .expect("failed to send write message to db");
 
             "ok"
         })
@@ -91,14 +91,19 @@ fn run_webserver(db_socket_path: &str) {
                 let mut conn = db_conn.lock().unwrap();
 
                 println!("sending list command to db");
-                conn.write_all("list".as_bytes()).expect("failed to send read message to db");
+                conn.write_all("list".as_bytes())
+                    .expect("failed to send read message to db");
 
                 println!("waiting for response from db");
                 let mut buf: [u8; 100] = [0; 100];
-                conn.read(&mut buf).expect("failed to read response from db");
+                conn.read(&mut buf)
+                    .expect("failed to read response from db");
                 println!("got response from db");
 
-                let messages = String::from_utf8(buf.to_vec()).unwrap().trim_end_matches('\0').to_string();
+                let messages = String::from_utf8(buf.to_vec())
+                    .unwrap()
+                    .trim_end_matches('\0')
+                    .to_string();
 
                 return messages;
             })
@@ -107,9 +112,7 @@ fn run_webserver(db_socket_path: &str) {
     let svc = warp::service(routes);
     let make_svc = hyper::service::make_service_fn(move |_| {
         let warp_svc = svc.clone();
-        async move {
-            Ok::<_, std::convert::Infallible>(warp_svc)
-        }
+        async move { Ok::<_, std::convert::Infallible>(warp_svc) }
     });
 
     // https://docs.rs/tokio/latest/tokio/net/struct.TcpListener.html#method.from_std
@@ -124,7 +127,6 @@ fn run_webserver(db_socket_path: &str) {
 }
 
 fn run_db(socket_path: &str) {
-
     // open socket connection to listen to requests on
     let socket = UnixListener::bind(socket_path).unwrap();
 
@@ -175,9 +177,13 @@ fn run_db(socket_path: &str) {
     loop {
         println!("db server waiting for unix socket message");
         let mut buf: [u8; 100] = [0; 100];
-        conn.read(&mut buf).expect("failed reading request to db server");
+        conn.read(&mut buf)
+            .expect("failed reading request to db server");
 
-        let buf = String::from_utf8(buf.to_vec()).unwrap().trim_end_matches('\0').to_string();
+        let buf = String::from_utf8(buf.to_vec())
+            .unwrap()
+            .trim_end_matches('\0')
+            .to_string();
 
         println!("db got unix socket message: '{}'", buf);
 
@@ -194,17 +200,18 @@ fn run_db(socket_path: &str) {
 
         match msg {
             DBMsg::List => {
-                let messages: Vec<String> = get_rows.query_map([], |row| row.get(0))
+                let messages: Vec<String> = get_rows
+                    .query_map([], |row| row.get(0))
                     .unwrap()
                     .map(|r| r.unwrap())
                     .collect();
 
-                conn.write_all(messages.join("\n").as_bytes()).expect("failed writing response from db server");
-                
-            },
+                conn.write_all(messages.join("\n").as_bytes())
+                    .expect("failed writing response from db server");
+            }
             DBMsg::Write(s) => {
                 insert_row.execute([s]).unwrap();
-            },
+            }
         }
     }
 }
@@ -213,7 +220,8 @@ fn run_client_write(msg: &str) {
     // set up runtime
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
-        .build().unwrap();
+        .build()
+        .unwrap();
 
     // Set up extrasafe context
     SafetyContext::new()
@@ -229,8 +237,16 @@ fn run_client_write(msg: &str) {
     runtime.block_on(async {
         let client = reqwest::Client::new();
 
-        let res = client.post("http://127.0.0.1:5576/write").body(msg).send().await;
-        assert!(res.is_ok(), "Error writing to server db: {:?}", res.unwrap_err());
+        let res = client
+            .post("http://127.0.0.1:5576/write")
+            .body(msg)
+            .send()
+            .await;
+        assert!(
+            res.is_ok(),
+            "Error writing to server db: {:?}",
+            res.unwrap_err()
+        );
 
         let text = res.unwrap().text().await.unwrap();
         assert_eq!(text, "ok");
@@ -242,7 +258,8 @@ fn run_client_read() {
     let runtime = tokio::runtime::Builder::new_current_thread()
         .worker_threads(1)
         .enable_all()
-        .build().unwrap();
+        .build()
+        .unwrap();
 
     // Open client before extrasafe context so that it can read ssl certificates and dns stuff
     let client = reqwest::Client::new();
@@ -257,25 +274,36 @@ fn run_client_read() {
             .allow_create()).unwrap()
         // Read required to get DNS info (e.g. resolv.conf) and read ssl certificates.
         // TODO: Is there a way to do this ahead of time?
-        .enable(SystemIO::nothing()
-            .allow_open_readonly()
-            .allow_read()
-            .allow_metadata()
-            .allow_close()).unwrap()
+        .enable(
+            SystemIO::nothing()
+                .allow_open_readonly()
+                .allow_read()
+                .allow_metadata()
+                .allow_close(),
+        )
+        .unwrap()
         .apply_to_current_thread()
         .unwrap();
 
     // make request
-    runtime.block_on( async {
+    runtime.block_on(async {
         // Show that we can resolve dns and do ssl. Data returned isn't checked or used anywhere,
         // we just get it.
         let resp = client.get("https://example.org/").send().await.unwrap();
         let res = resp.text().await;
-        assert!(res.is_ok(), "failed getting example.org response: {:?}", res.unwrap_err());
+        assert!(
+            res.is_ok(),
+            "failed getting example.org response: {:?}",
+            res.unwrap_err()
+        );
 
         println!("about to make read request to webserver");
         let res = client.get("http://127.0.0.1:5576/read").send().await;
-        assert!(res.is_ok(), "Error reading from server db: {:?}", res.unwrap_err());
+        assert!(
+            res.is_ok(),
+            "Error reading from server db: {:?}",
+            res.unwrap_err()
+        );
 
         let text = res.unwrap().text().await.unwrap();
         assert_eq!(text, "hello\nextrasafe");
@@ -314,22 +342,45 @@ fn main() {
 
     // -- write "hello" to db
     let res1 = run_subprocess(&["write_client", "hello"]).wait();
-    assert!(res1.is_ok(), "client1 failed to finish: {:?}", res1.unwrap_err());
+    assert!(
+        res1.is_ok(),
+        "client1 failed to finish: {:?}",
+        res1.unwrap_err()
+    );
     let status = res1.unwrap();
-    assert!(status.success(), "client1 exited unsuccessfully: {:?}", status);
+    assert!(
+        status.success(),
+        "client1 exited unsuccessfully: {:?}",
+        status
+    );
 
     // -- write "extrasafe" to db
     let res2 = run_subprocess(&["write_client", "extrasafe"]).wait();
-    assert!(res2.is_ok(), "client2 failed to finish: {:?}", res2.unwrap_err());
+    assert!(
+        res2.is_ok(),
+        "client2 failed to finish: {:?}",
+        res2.unwrap_err()
+    );
     let status = res2.unwrap();
-    assert!(status.success(), "client2 exited unsuccessfully: {:?}", status);
-
+    assert!(
+        status.success(),
+        "client2 exited unsuccessfully: {:?}",
+        status
+    );
 
     // -- read back, check messages are there in order
-    let res3 = run_subprocess(&["read_client",]).wait();
-    assert!(res3.is_ok(), "client3 failed to finish: {:?}", res3.unwrap_err());
+    let res3 = run_subprocess(&["read_client"]).wait();
+    assert!(
+        res3.is_ok(),
+        "client3 failed to finish: {:?}",
+        res3.unwrap_err()
+    );
     let status = res3.unwrap();
-    assert!(status.success(), "client3 exited unsuccessfully: {:?}", status);
+    assert!(
+        status.success(),
+        "client3 exited unsuccessfully: {:?}",
+        status
+    );
 
     db_child.kill().unwrap();
     webserver_child.kill().unwrap();
