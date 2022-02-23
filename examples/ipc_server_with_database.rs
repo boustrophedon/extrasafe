@@ -1,5 +1,8 @@
 #![allow(clippy::unused_io_amount)]
 
+// Tarpaulin can't track coverage on the subprocesses spawned.
+#![cfg(not(tarpaulin_include))]
+
 //! A fully functioning example of a web server, an on-disk database, and an http client, with
 //! subprocesses communicating via a unix socket.
 //!
@@ -22,6 +25,11 @@ use std::os::unix::net::{UnixListener, UnixStream};
 use std::os::unix::process::CommandExt;
 
 use std::sync::{Arc, Mutex};
+
+#[test]
+fn run_main() {
+    main()
+}
 
 /// This is essentially the wire format for our DB connection
 enum DBMsg {

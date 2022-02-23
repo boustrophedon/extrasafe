@@ -1,6 +1,11 @@
 use std::fs::File;
 use std::io::Write;
 
+#[test]
+fn run_main() {
+    main()
+}
+
 fn main() {
     // create a safety context
     // enable no systemIO
