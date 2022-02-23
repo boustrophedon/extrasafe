@@ -1,0 +1,83 @@
+# Inspired heavily by the libseccomp-rs CI script
+
+name: build-test
+on: push
+jobs:
+  validate:
+    name: Format and Lint Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Install libseccomp
+        run: sudo apt-get install libseccomp-dev
+      - name: Install rustfmt and clippy
+        run: rustup component add rustfmt clippy
+    # - name: Run cargo fmt
+    #   run: cargo fmt --all -- --check
+      - name: Run cargo clippy
+        run: cargo clippy --all-targets --all-features -- --deny warnings 
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Install libseccomp
+        run: sudo apt-get install libseccomp-dev
+      - name: Run tests
+        run: cargo test
+
+          # static-link-bundled:
+          #   name: Run tests with libseccomp bundled and statically linked with musl
+          #   runs-on: ubuntu-latest
+          #   strategy:
+          #     fail-fast: false
+          #     matrix:
+          #       target:
+          #         - x86_64-unknown-linux-musl
+          #   steps:
+          #     - name: Checkout
+          #       uses: actions/checkout@v2
+          #     - name: Install Rust toolchain
+          #       run: rustup target add ${{ matrix.target }}
+          #     - name: Install musl gcc
+          #       run: sudo apt-get install musl-tools
+          #     - name: Install required dependencies for bundled (may be preinstalled)
+          #       run: sudo apt-get install gperf tar curl
+          #     - name: Run test
+          #       run: cargo test --features bundled --target ${{ matrix.target }}
+
+  doc:
+    name: Documentation Check
+    runs-on: ubuntu-latest
+    env:
+      RUSTDOCFLAGS: -Dwarnings
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Generate documentations
+        run: cargo doc --no-deps
+
+  coverage:
+    name: Code Coverage
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        features:
+          - all-features
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Install libseccomp
+        run: sudo apt-get install libseccomp-dev
+      - name: Run cargo tarpaulin
+        uses: actions-rs/tarpaulin@v0.1
+        with:
+          args: '--${{ matrix.features }} --tests --examples --out Lcov --output-dir ./coverage'
+      - name: Upload coverage to coveralls
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
