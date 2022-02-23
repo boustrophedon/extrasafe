@@ -1,7 +1,4 @@
-- ipc example / test
-  - create ipc socket (pipe, unix socket, whatever)
-  - enable extrasafe profile that doesn't allow creation of new ones
-  - check you can still send messages
+# Nice to haves
 
 - more builtin profiles
 	take inspiration from pledge promises (https://man.openbsd.org/pledge.2)
@@ -27,7 +24,18 @@
   - feature flag for macro with return value over channel
 
 
-## Remove all dependencies
+# New functionality
+https://chromium.googlesource.com/chromium/src.git/+/HEAD/docs/linux/sandboxing.md#User-namespaces-sandbox
+
+User namespaces option? Something like:
+
+rust
+```
+SafetyContext::new()
+.isolate_process()
+``` 
+
+# Remove all dependencies
 If you're using extrasafe to provide extra security, it then becomes a target for vulnerabilities, including supply-chain attacks.
 
 ### this-error
