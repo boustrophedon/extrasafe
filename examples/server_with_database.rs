@@ -56,7 +56,7 @@ fn run_server() {
     // warp annoyance workaround
     let db_queue = queue.clone();
     let read_queue = queue.clone();
-    let write_queue = queue.clone();
+    let write_queue = queue;
 
     // spawn db server thread
     std::thread::Builder::new()
@@ -97,7 +97,7 @@ fn run_server() {
 
                 let messages = recv.recv().unwrap();
 
-                return messages.join("\n");
+                messages.join("\n")
             })
         );
 

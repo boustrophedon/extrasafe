@@ -1,3 +1,5 @@
+#![allow(clippy::unused_io_amount)]
+
 use extrasafe::{
     builtins::{danger_zone::Threads, Networking},
     SafetyContext,

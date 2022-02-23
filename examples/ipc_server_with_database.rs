@@ -1,3 +1,5 @@
+#![allow(clippy::unused_io_amount)]
+
 //! A fully functioning example of a web server, an on-disk database, and an http client, with
 //! subprocesses communicating via a unix socket.
 //!
@@ -38,7 +40,8 @@ fn run_subprocess(cmd: &[&str]) -> std::process::Child {
         .arg0(cmd[0])
         .args(cmd)
         .spawn()
-        .expect(&format!("subcommand `{}` failed to start", cmd.join(" ")))
+        .map_err(|e| format!("subcommand `{}` failed to start: {:?}", cmd.join(" "), e))
+        .unwrap()
 }
 
 fn with_db(
@@ -85,7 +88,7 @@ fn run_webserver(db_socket_path: &str) {
         })
         .or(warp::path("read")
             .and(warp::get())
-            .and(with_db(db_socket.clone()))
+            .and(with_db(db_socket))
             .map(|db_conn: DbConn| {
                 println!("webserver got read request");
                 let mut conn = db_conn.lock().unwrap();
@@ -105,7 +108,7 @@ fn run_webserver(db_socket_path: &str) {
                     .trim_end_matches('\0')
                     .to_string();
 
-                return messages;
+                messages
             })
         );
 
