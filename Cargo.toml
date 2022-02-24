@@ -2,8 +2,12 @@
 name = "extrasafe"
 version = "0.1.0"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+authors = ["Harry Stern <harry@harrystern.net>",]
+description = "Make your code extrasafe by preventing it from calling unneeded syscalls."
+repository = "https://github.com/boustrophedon/extrasafe"
+license = "MIT"
+keywords = ["security", "seccomp", "sandbox", "syscall"]
+categories = ["os::linux-apis"]
 
 [dependencies]
 libseccomp = "^0.2"
