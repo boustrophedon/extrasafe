@@ -28,27 +28,7 @@ jobs:
       - name: Install libseccomp
         run: sudo apt-get install libseccomp-dev
       - name: Run tests
-        run: cargo test
-
-          # static-link-bundled:
-          #   name: Run tests with libseccomp bundled and statically linked with musl
-          #   runs-on: ubuntu-latest
-          #   strategy:
-          #     fail-fast: false
-          #     matrix:
-          #       target:
-          #         - x86_64-unknown-linux-musl
-          #   steps:
-          #     - name: Checkout
-          #       uses: actions/checkout@v2
-          #     - name: Install Rust toolchain
-          #       run: rustup target add ${{ matrix.target }}
-          #     - name: Install musl gcc
-          #       run: sudo apt-get install musl-tools
-          #     - name: Install required dependencies for bundled (may be preinstalled)
-          #       run: sudo apt-get install gperf tar curl
-          #     - name: Run test
-          #       run: cargo test --features bundled --target ${{ matrix.target }}
+        run: cargo test --tests --examples
 
   doc:
     name: Documentation Check
@@ -58,7 +38,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - name: Generate documentations
+      - name: Generate documentation
         run: cargo doc --no-deps
 
   coverage:
