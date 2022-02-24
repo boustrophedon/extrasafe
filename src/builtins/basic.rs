@@ -61,6 +61,10 @@ impl RuleSet for BasicCapabilities {
             Sysno::sched_getaffinity, Sysno::sched_setaffinity,
             Sysno::sched_yield,
 
+            // rseq is used in newer glibc for some initialization purposes.
+            // It's kind of complicated but does not appear to be dangerous.
+            Sysno::rseq,
+
             // Exiting is probably fine.
             Sysno::exit,
             Sysno::exit_group,
