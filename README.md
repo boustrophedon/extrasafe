@@ -1,5 +1,7 @@
 # extrasafe
 
+[![Coverage Status](https://coveralls.io/repos/github/boustrophedon/extrasafe/badge.svg?branch=master)](https://coveralls.io/github/boustrophedon/extrasafe?branch=master) [![CI Status](https://github.com/boustrophedon/extrasafe/actions/workflows/build-test.yaml/badge.svg)](https://github.com/boustrophedon/extrasafe/actions/workflows/build-test.yaml) [Crates.io Status: TODO](https://example.com) [Docs.rs Status: TODO](https://example.com)
+
 *"trust noone not even urself" - internet man*
 
 ```rust
