@@ -34,7 +34,7 @@ fn invalid_combination_new_simple() {
     );
 
     let err = res.unwrap_err();
-    assert_eq!(err.to_string(), "New simple rule on syscall `write` from RuleSet `SystemIO` would override existing conditional rule from RuleSet `SystemIO`.");
+    assert_eq!(err.to_string(), "A conditional rule on syscall `write` from RuleSet `SystemIO` would be overridden by a simple rule from RuleSet `SystemIO`.");
 }
 
 #[test]
@@ -46,7 +46,7 @@ fn invalid_combination_new_conditional() {
     assert!(res.is_err(), "Extrasafe didn't fail when adding conflicting rules");
 
     let err = res.unwrap_err();
-    assert_eq!(err.to_string(), "New conditional rule on syscall `write` from RuleSet `SystemIO` would be overridden by existing simple rule from RuleSet `SystemIO`.");
+    assert_eq!(err.to_string(), "A conditional rule on syscall `write` from RuleSet `SystemIO` would be overridden by a simple rule from RuleSet `SystemIO`.");
 }
 
 #[test]
@@ -62,7 +62,7 @@ fn invalid_combination_new_simple_different_name() {
     );
 
     let err = res.unwrap_err();
-    assert_eq!(err.to_string(), "New simple rule on syscall `write` from RuleSet `JustWrite` would override existing conditional rule from RuleSet `SystemIO`.");
+    assert_eq!(err.to_string(), "A conditional rule on syscall `write` from RuleSet `SystemIO` would be overridden by a simple rule from RuleSet `JustWrite`.");
 }
 
 #[test]
@@ -74,5 +74,5 @@ fn invalid_combination_new_conditional_different_name() {
     assert!(res.is_err(), "Extrasafe didn't fail when adding conflicting rules");
 
     let err = res.unwrap_err();
-    assert_eq!(err.to_string(), "New conditional rule on syscall `write` from RuleSet `SystemIO` would be overridden by existing simple rule from RuleSet `JustWrite`.");
+    assert_eq!(err.to_string(), "A conditional rule on syscall `write` from RuleSet `SystemIO` would be overridden by a simple rule from RuleSet `JustWrite`.");
 }

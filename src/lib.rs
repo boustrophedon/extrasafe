@@ -133,10 +133,10 @@ impl SafetyContext {
                     let same_syscall = new_rule.syscall == existing_rule.syscall;
 
                     if same_syscall && new_is_simple && !existing_is_simple {
-                        return Err(ExtraSafeError::SimpleOverrideError(
+                        return Err(ExtraSafeError::ConditionalNoEffectError(
                             new_rule.syscall,
-                            labeled_new_rule.0,
                             labeled_existing_rule.0,
+                            labeled_new_rule.0,
                         ));
                     }
                     if same_syscall && !new_is_simple && existing_is_simple {
@@ -211,14 +211,12 @@ impl SafetyContext {
 /// The error type produced by extrasafe::SafetyContext
 pub enum ExtraSafeError {
     #[error("extrasafe is only usable on Linux.")]
-    /// Error created when trying to apply filters on non-Linux operating systems.
+    /// Error created when trying to apply filters on non-Linux operating systems. Should never
+    /// occur.
     UnsupportedOSError,
-    #[error("New conditional rule on syscall `{0}` from RuleSet `{1}` would be overridden by existing simple rule from RuleSet `{2}`.")]
-    /// Conflicting condition was added.
+    #[error("A conditional rule on syscall `{0}` from RuleSet `{1}` would be overridden by a simple rule from RuleSet `{2}`.")]
+    /// Error created when a simple rule would override a conditional rule.
     ConditionalNoEffectError(syscalls::Sysno, &'static str, &'static str),
-    #[error("New simple rule on syscall `{0}` from RuleSet `{1}` would override existing conditional rule from RuleSet `{2}`.")]
-    /// Conflicting condition was added.
-    SimpleOverrideError(syscalls::Sysno, &'static str, &'static str),
     #[error("A libseccomp error occured. {0:?}")]
     /// An error from the underlying seccomp library.
     SeccompError(#[from] libseccomp::error::SeccompError),
