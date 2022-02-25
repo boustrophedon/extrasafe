@@ -212,9 +212,8 @@ fn run_db(socket_path: &str) {
         match msg {
             DBMsg::List => {
                 let messages: Vec<String> = get_rows
-                    .query_map([], |row| row.get(0))
-                    .unwrap()
-                    .map(|r| r.unwrap())
+                    .query_map([], |row| row.get(0)).unwrap()
+                    .map(Result::unwrap)
                     .collect();
 
                 conn.write_all(messages.join("\n").as_bytes())

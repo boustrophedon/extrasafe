@@ -1,4 +1,4 @@
-//! Built-in RuleSets
+//! Built-in `RuleSet`s
 
 /// A struct whose purpose is to make you read the documentation for the function you're calling.
 /// If you're reading this, go read the documentation for the function that is returning this
@@ -9,11 +9,13 @@ pub struct YesReally<T> {
 
 impl<T> YesReally<T> {
     /// Confirm you really wanted to call the function and return its result.
+    #[must_use]
     pub fn yes_really(self) -> T {
         self.inner
     }
 
-    /// Make a YesReally.
+    /// Make a `YesReally`.
+    #[must_use]
     pub fn new(inner: T) -> YesReally<T> {
         YesReally {
             inner,

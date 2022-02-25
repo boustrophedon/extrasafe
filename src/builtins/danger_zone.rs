@@ -1,4 +1,4 @@
-//! Contains a RuleSet for allowing syscalls that may be dangerous.
+//! Contains a `RuleSet` for allowing syscalls that may be dangerous.
 
 use std::collections::{HashMap, HashSet};
 
@@ -25,7 +25,8 @@ pub struct Threads {
 }
 
 impl Threads {
-    /// Create a new Threads ruleset with nothing allowed by default.
+    /// Create a new `Threads` ruleset with nothing allowed by default.
+    #[must_use]
     pub fn nothing() -> Threads {
         Threads {
             allowed: HashSet::new(),
@@ -33,6 +34,7 @@ impl Threads {
     }
 
     /// Allow creating new threads and processes.
+    #[must_use]
     pub fn allow_create(mut self) -> Threads {
         self.allowed.extend([Sysno::clone, Sysno::clone3]);
 
@@ -44,6 +46,7 @@ impl Threads {
     /// # Security considerations
     /// An attacker with arbitrary code execution and access to a high resolution timer can mount
     /// timing attacks (e.g. spectre).
+    #[must_use]
     pub fn allow_sleep(mut self) -> YesReally<Threads> {
         self.allowed
             .extend([Sysno::clock_nanosleep, Sysno::nanosleep]);
@@ -81,7 +84,7 @@ impl RuleSet for Threads {
     }
 }
 
-/// ForkAndExec is in the danger zone because it can be used to start another process, including
+/// `ForkAndExec` is in the danger zone because it can be used to start another process, including
 /// more privileged ones. That process will still be under seccomp's restrictions (see
 /// `tests/inherit_filters.rs`) but depending on your filter it could still do bad things.
 ///
@@ -134,7 +137,8 @@ pub struct Time {
 
 // HashSet::insert returns a bool and unused_results is being triggered.
 impl Time {
-    /// Create a new Time RuleSet with nothing allowed by default.
+    /// Create a new Time `RuleSet` with nothing allowed by default.
+    #[must_use]
     pub fn nothing() -> Time {
         Time {
             allowed: HashSet::new(),
@@ -142,6 +146,7 @@ impl Time {
     }
 
     /// Allows you to set the system time. You really probably don't need this.
+    #[must_use]
     pub fn allow_settime(mut self) -> YesReally<Time> {
         self.allowed
             .extend([Sysno::clock_settime, Sysno::clock_adjtime]);
@@ -152,6 +157,7 @@ impl Time {
     /// Allows you to get the system time. This is in the danger zone because it made sense to put
     /// the time functions together, and also technically highres timers can be used for timing
     /// attacks (but a determined attacker can use other methods besides just calling gettime).
+    #[must_use]
     pub fn allow_gettime(mut self) -> Time {
         self.allowed
             .extend([Sysno::clock_gettime, Sysno::clock_getres]);

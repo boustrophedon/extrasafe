@@ -66,7 +66,7 @@ fn run_server() {
     // spawn db server thread
     std::thread::Builder::new()
         .name("db".into())
-        .spawn(move || run_db(db_queue)).unwrap();
+        .spawn(move || run_db(&db_queue)).unwrap();
     
     // set up runtime
     let runtime = tokio::runtime::Builder::new_current_thread()
@@ -123,7 +123,7 @@ fn run_server() {
     runtime.block_on(server.serve(make_svc)).unwrap();
 }
 
-fn run_db(queue: DbConn) {
+fn run_db(queue: &DbConn) {
     let dir = tempfile::tempdir().unwrap();
     let mut path = dir.path().to_path_buf();
     path.push("testdb.sql3");
@@ -167,9 +167,8 @@ fn run_db(queue: DbConn) {
         match msg {
             DBMsg::List(send) => {
                 let messages: Vec<String> = get_rows
-                    .query_map([], |row| row.get(0))
-                    .unwrap()
-                    .map(|r| r.unwrap())
+                    .query_map([], |row| row.get(0)).unwrap()
+                    .map(Result::unwrap)
                     .collect();
 
                 send.send(messages).unwrap();

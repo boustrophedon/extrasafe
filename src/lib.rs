@@ -3,14 +3,14 @@
 #![deny(unused_results)]
 #![allow(clippy::new_without_default)]
 // Denied in CI
-#![warn(missing_docs)]
+//#![warn(missing_docs)]
 #![warn(trivial_casts, trivial_numeric_casts)]
 
 //! extrasafe is a library that makes it easy to improve your program's security by selectively
 //! allowing the syscalls it can perform via the Linux kernel's seccomp facilities.
 //!
-//! See the SafetyContext struct's documentation and the tests/ and examples/ directories for more
-//! information on how to use it.
+//! See the `SafetyContext` struct's documentation and the tests/ and examples/ directories for
+//! more information on how to use it.
 
 use libseccomp::*;
 use thiserror::Error;
@@ -32,6 +32,7 @@ pub struct Rule {
 
 impl Rule {
     /// Constructs a new Rule that unconditionally allows the given syscall.
+    #[must_use]
     pub fn new(syscall: syscalls::Sysno) -> Rule {
         Rule {
             syscall,
@@ -41,6 +42,7 @@ impl Rule {
 
     /// Adds a condition to the Rule which must evaluate to true in order for the syscall to be
     /// allowed.
+    #[must_use]
     pub fn and_condition(mut self, comparator: ScmpArgCompare) -> Rule {
         self.comparators.push(comparator);
 
@@ -49,17 +51,16 @@ impl Rule {
 }
 
 #[derive(Debug, Clone)]
-/// A Rule labeled with the profile it originated from. Internal-only.
+/// A `Rule` labeled with the profile it originated from. Internal-only.
 struct LabeledRule(pub &'static str, pub Rule);
 
-/// A RuleSet is a collection of seccomp Rules that enable a functionality.
+/// A `RuleSet` is a collection of seccomp Rules that enable a functionality.
 pub trait RuleSet {
-    /// A simple rule is one that uses `add_rule` i.e. it just allows the syscall without
-    /// restriction.
+    /// A simple rule is one that just allows the syscall without restriction.
     fn simple_rules(&self) -> Vec<syscalls::Sysno>;
 
     /// A conditional rule is a rule that uses a condition to restrict the syscall, e.g. only
-    /// specific fds as an argument.
+    /// specific flags as parameters.
     fn conditional_rules(&self) -> HashMap<syscalls::Sysno, Vec<Rule>>;
 
     /// The name of the profile.
@@ -97,7 +98,7 @@ pub struct SafetyContext {
 }
 
 impl SafetyContext {
-    /// Create a new SafetyContext. The seccomp filters will not be loaded until either
+    /// Create a new `SafetyContext`. The seccomp filters will not be loaded until either
     /// `apply_to_current_thread` or `apply_to_all_threads` is called.
     pub fn new() -> SafetyContext {
         #[cfg(not(target_arch = "x86_64"))]
@@ -110,7 +111,11 @@ impl SafetyContext {
         }
     }
 
-    /// Enable the functionality determined by the SecurityPolicy
+    /// Enable the simple and conditional rules provided by the `RuleSet`.
+    ///
+    /// # Errors
+    /// Will return `ExtraSafeError::ConditionalNoEffectError` if a conditional rule is enabled at
+    /// the same time as a simple rule for a syscall, which would override the conditional rule.
     pub fn enable(mut self, policy: impl RuleSet) -> Result<SafetyContext, ExtraSafeError> {
         // Note that we can't do this check in each individual gather_rules because different
         // policies may enable the same syscall.
@@ -158,14 +163,20 @@ impl SafetyContext {
         Ok(self)
     }
 
-    /// Load the SafetyContext's rules into a seccomp filter and apply the filter to the current
+    /// Load the `SafetyContext`'s rules into a seccomp filter and apply the filter to the current
     /// thread.
+    ///
+    /// # Errors
+    /// May return `ExtraSafeError::SeccompError`.
     pub fn apply_to_current_thread(self) -> Result<(), ExtraSafeError> {
         self.apply(false)
     }
 
-    /// Load the SafetyContext's rules into a seccomp filter and apply the filter to all threads in
+    /// Load the `SafetyContext`'s rules into a seccomp filter and apply the filter to all threads in
     /// this process.
+    ///
+    /// # Errors
+    /// May return `ExtraSafeError::SeccompError`.
     pub fn apply_to_all_threads(self) -> Result<(), ExtraSafeError> {
         self.apply(true)
     }
@@ -208,7 +219,7 @@ impl SafetyContext {
 }
 
 #[derive(Debug, Error)]
-/// The error type produced by extrasafe::SafetyContext
+/// The error type produced by `extrasafe::SafetyContext`
 pub enum ExtraSafeError {
     #[error("extrasafe is only usable on Linux.")]
     /// Error created when trying to apply filters on non-Linux operating systems. Should never

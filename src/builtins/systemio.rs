@@ -1,4 +1,4 @@
-//! Contains a RuleSet for allowing IO-related syscalls.
+//! Contains a `RuleSet` for allowing IO-related syscalls, like file opening, reading, and writing.
 
 use std::collections::{HashSet, HashMap};
 use std::fs::File;
@@ -22,7 +22,7 @@ const IO_METADATA_SYSCALLS: &[Sysno] = &[Sysno::stat, Sysno::fstat, Sysno::newfs
                                          Sysno::getcwd];
 const IO_CLOSE_SYSCALLS: &[Sysno] = &[Sysno::close, Sysno::close_range];
 
-/// A RuleSet representing syscalls that perform IO - open/close/read/write/seek/stat.
+/// A `RuleSet` representing syscalls that perform IO - open/close/read/write/seek/stat.
 ///
 /// Configurable to allow subsets of IO syscalls and specific fds.
 pub struct SystemIO {
@@ -34,6 +34,7 @@ pub struct SystemIO {
 
 impl SystemIO {
     /// By default, allow no IO syscalls.
+    #[must_use]
     pub fn nothing() -> SystemIO {
         SystemIO {
             allowed: HashSet::new(),
@@ -42,6 +43,7 @@ impl SystemIO {
     }
 
     /// Allow all IO syscalls.
+    #[must_use]
     pub fn everything() -> SystemIO {
         SystemIO::nothing()
             .allow_read()
@@ -54,6 +56,7 @@ impl SystemIO {
 
 
     /// Allow `read` syscalls.
+    #[must_use]
     pub fn allow_read(mut self) -> SystemIO {
         self.allowed.extend(IO_READ_SYSCALLS);
 
@@ -61,6 +64,7 @@ impl SystemIO {
     }
 
     /// Allow `write` syscalls.
+    #[must_use]
     pub fn allow_write(mut self) -> SystemIO {
         self.allowed.extend(IO_WRITE_SYSCALLS);
 
@@ -71,9 +75,10 @@ impl SystemIO {
     ///
     /// # Security
     ///
-    /// The reason this function returns a YesReally is because it's easy to accidentally combine
+    /// The reason this function returns a `YesReally` is because it's easy to accidentally combine
     /// it with another ruleset that allows `write` - for example the Network ruleset - even if you
     /// only want to read files.
+    #[must_use]
     pub fn allow_open(mut self) -> YesReally<SystemIO> {
         self.allowed.extend(IO_OPEN_SYSCALLS);
 
@@ -82,9 +87,10 @@ impl SystemIO {
 
     /// Allow `open` syscalls but not with write flags.
     ///
-    /// Note that the openat2 syscall (which is not exposed by glibc anyway according to the
+    /// Note that the `openat2` syscall (which is not exposed by glibc anyway according to the
     /// syscall manpage, and so probably isn't very common) is not supported here because it has a
     /// separate configuration struct instead of a flag bitset.
+    #[must_use]
     pub fn allow_open_readonly(mut self) -> SystemIO {
         const O_WRONLY: u64 = libc::O_WRONLY as u64;
         const O_RDWR: u64 = libc::O_RDWR as u64;
@@ -116,6 +122,7 @@ impl SystemIO {
     }
 
     /// Allow `stat` syscalls.
+    #[must_use]
     pub fn allow_metadata(mut self) -> SystemIO {
         self.allowed.extend(IO_METADATA_SYSCALLS);
 
@@ -123,6 +130,7 @@ impl SystemIO {
     }
 
     /// Allow `ioctl` and `fcntl` syscalls.
+    #[must_use]
     pub fn allow_ioctl(mut self) -> SystemIO {
         self.allowed.extend(IO_IOCTL_SYSCALLS);
 
@@ -130,6 +138,7 @@ impl SystemIO {
     }
 
     /// Allow `close` syscalls.
+    #[must_use]
     pub fn allow_close(mut self) -> SystemIO {
         self.allowed.extend(IO_CLOSE_SYSCALLS);
 
@@ -137,6 +146,7 @@ impl SystemIO {
     }
 
     /// Allow reading from stdin
+    #[must_use]
     pub fn allow_stdin(mut self) -> SystemIO {
         let rule = Rule::new(Sysno::read)
             .and_condition(scmp_cmp!($arg0 == 0));
@@ -148,6 +158,7 @@ impl SystemIO {
     }
 
     /// Allow writing to stdout
+    #[must_use]
     pub fn allow_stdout(mut self) -> SystemIO {
         let rule = Rule::new(Sysno::write)
             .and_condition(scmp_cmp!($arg0 == 1));
@@ -159,6 +170,7 @@ impl SystemIO {
     }
 
     /// Allow writing to stderr
+    #[must_use]
     pub fn allow_stderr(mut self) -> SystemIO {
         let rule = Rule::new(Sysno::write)
             .and_condition(scmp_cmp!($arg0 == 2));
@@ -172,6 +184,7 @@ impl SystemIO {
     /// Allow reading a given open File. Note that with just this, you will not be able to close
     /// the file under this context. In most cases that shouldn't really matter since presumably
     /// you've opened it in a context that has open (and therefore close) capabilities.
+    #[must_use]
     pub fn allow_file_read(mut self, file: &File) -> SystemIO {
         let fd = file.as_raw_fd();
         for &syscall in IO_READ_SYSCALLS {
@@ -195,6 +208,7 @@ impl SystemIO {
     /// Allow writing to a given open File. Note that with just this, you will not be able to close
     /// the file under this context. In most cases that shouldn't really matter since presumably
     /// you've opened it in a context that has open (and therefore close) capabilities.
+    #[must_use]
     pub fn allow_file_write(mut self, file: &File) -> SystemIO {
         let fd = file.as_raw_fd();
         let rule = Rule::new(Sysno::write)

@@ -1,4 +1,4 @@
-//! Contains a RuleSet for allowing networking-related syscalls.
+//! Contains a `RuleSet` for allowing networking-related syscalls.
 
 use std::collections::{HashMap, HashSet};
 
@@ -41,7 +41,7 @@ const NET_WRITE_SYSCALLS: &[Sysno] = &[Sysno::sendto, Sysno::sendmsg, Sysno::sen
 const NET_CREATE_SERVER_SYSCALLS: &[Sysno] = &[Sysno::socket, Sysno::bind];
 const NET_CREATE_CLIENT_SYSCALLS: &[Sysno] = &[Sysno::socket, Sysno::connect];
 
-/// A RuleSet representing syscalls that perform network operations - accept/listen/bind/connect etc.
+/// A `RuleSet` representing syscalls that perform network operations - accept/listen/bind/connect etc.
 ///
 /// # How to use
 ///
@@ -71,6 +71,7 @@ pub struct Networking {
 
 impl Networking {
     /// By default, allow no networking syscalls.
+    #[must_use]
     pub fn nothing() -> Networking {
         Networking {
             allowed: HashSet::new(),
@@ -80,6 +81,7 @@ impl Networking {
 
     /// Allow a running TCP server to continue running. Does not allow `socket` or `bind` to
     /// prevent new sockets from being created.
+    #[must_use]
     pub fn allow_running_tcp_servers(mut self) -> Networking {
         self.allowed.extend(NET_IO_SYSCALLS);
         self.allowed.extend(NET_READ_SYSCALLS);
@@ -94,6 +96,7 @@ impl Networking {
     ///
     /// You probably don't need to use this. In most cases you can just run your server and then
     /// use `allow_running_server`. See `examples/network_server.rs` for an example with warp.
+    #[must_use]
     pub fn allow_start_tcp_servers(mut self) -> YesReally<Networking> {
         self.allowed.extend(NET_CREATE_SERVER_SYSCALLS);
         self.allowed.extend(NET_IO_SYSCALLS);
@@ -105,6 +108,7 @@ impl Networking {
 
     /// Allow a running UDP server to continue running. Does not allow `socket` or `bind` to
     /// prevent new sockets from being created.
+    #[must_use]
     pub fn allow_running_udp_sockets(mut self) -> Networking {
         self.allowed.extend(NET_IO_SYSCALLS);
         self.allowed.extend(NET_READ_SYSCALLS);
@@ -119,6 +123,7 @@ impl Networking {
     ///
     /// You probably don't need to use this. In most cases you can just run your server and then
     /// use `allow_running_server`.
+    #[must_use]
     pub fn allow_start_udp_servers(mut self) -> YesReally<Networking> {
         self.allowed.extend(NET_CREATE_SERVER_SYSCALLS);
         self.allowed.extend(NET_READ_SYSCALLS);
@@ -133,6 +138,7 @@ impl Networking {
     ///
     /// In some cases you can create the socket ahead of time, but that isn't possible with e.g.
     /// reqwest, so we allow socket but not bind here.
+    #[must_use]
     pub fn allow_start_tcp_clients(mut self) -> Networking {
         self.allowed.extend(NET_CREATE_CLIENT_SYSCALLS);
         self.allowed.extend(NET_IO_SYSCALLS);
@@ -146,6 +152,7 @@ impl Networking {
     /// prevent new sockets from being created.
     ///
     /// This is technically the same as `allow_running_tcp_servers`.
+    #[must_use]
     pub fn allow_running_tcp_clients(mut self) -> Networking {
         self.allowed.extend(NET_IO_SYSCALLS);
         self.allowed.extend(NET_READ_SYSCALLS);
@@ -160,6 +167,7 @@ impl Networking {
     ///
     /// You probably don't need to use this. In most cases you can just run your server and then
     /// use `allow_running_server`.
+    #[must_use]
     pub fn allow_start_unix_server(mut self) -> YesReally<Networking> {
         self.allowed.extend(NET_CREATE_SERVER_SYSCALLS);
         self.allowed.extend(NET_IO_SYSCALLS);
@@ -171,6 +179,7 @@ impl Networking {
 
     /// Allow a running Unix server to continue running. Does not allow `socket` or `bind` to
     /// prevent new sockets from being created.
+    #[must_use]
     pub fn allow_running_unix_servers(mut self) -> Networking {
         self.allowed.extend(NET_IO_SYSCALLS);
         self.allowed.extend(NET_READ_SYSCALLS);
@@ -183,6 +192,7 @@ impl Networking {
     /// prevent new sockets from being created.
     ///
     /// This is technically the same as `allow_running_unix_servers`.
+    #[must_use]
     pub fn allow_running_unix_clients(mut self) -> Networking {
         self.allowed.extend(NET_IO_SYSCALLS);
         self.allowed.extend(NET_READ_SYSCALLS);
