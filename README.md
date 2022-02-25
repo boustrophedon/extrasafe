@@ -9,9 +9,10 @@ fn main() {
     println!("disabling syscalls...");
 
     extrasafe::SafetyContext::new()
-        .enable(extrasafe::SystemIO::nothing()
-            .allow_stdout()
-            .allow_stderr()
+        .enable(
+           extrasafe::builtins::SystemIO::nothing()
+              .allow_stdout()
+              .allow_stderr()
    	    ).unwrap()
 	.apply_to_all_threads().unwrap();
 
@@ -60,7 +61,7 @@ So you can be extra safe. Suppose your program has a dependency with an undiscov
 - log4j RCEs
   - Relies on being able to make network calls, so extrasafe can mitigate this by
     - If your program doesn't need network access, don't give it access (but then you aren't really exploitable anyway in most cases)
-    - Logging in a separate thread that doesn't have network access (uncommon but honestly useful some scenarios to prevent blocking IO in e.g. a web server thread)
+    - Logging in a separate thread that doesn't have network access
 
 # Caveats
 

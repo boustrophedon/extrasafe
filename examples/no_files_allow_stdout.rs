@@ -16,7 +16,7 @@ fn main() {
         .enable(
             extrasafe::builtins::SystemIO::nothing()
                 .allow_stdout()
-                .allow_stderr(),
+                .allow_stderr()
         )
         .unwrap()
         .apply_to_all_threads();
