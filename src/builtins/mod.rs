@@ -1,4 +1,4 @@
-//! Built-in `RuleSet`s
+//! Built-in [`RuleSet`](crate::RuleSet)s
 
 /// A struct whose purpose is to make you read the documentation for the function you're calling.
 /// If you're reading this, go read the documentation for the function that is returning this
@@ -14,7 +14,7 @@ impl<T> YesReally<T> {
         self.inner
     }
 
-    /// Make a `YesReally`.
+    /// Make a [`YesReally`].
     #[must_use]
     pub fn new(inner: T) -> YesReally<T> {
         YesReally {

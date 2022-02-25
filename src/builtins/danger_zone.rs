@@ -1,4 +1,4 @@
-//! Contains a `RuleSet` for allowing syscalls that may be dangerous.
+//! Contains a [`RuleSet`] for allowing syscalls that may be dangerous.
 
 use std::collections::{HashMap, HashSet};
 
@@ -25,7 +25,7 @@ pub struct Threads {
 }
 
 impl Threads {
-    /// Create a new `Threads` ruleset with nothing allowed by default.
+    /// Create a new [`Threads`] ruleset with nothing allowed by default.
     #[must_use]
     pub fn nothing() -> Threads {
         Threads {
@@ -84,8 +84,8 @@ impl RuleSet for Threads {
     }
 }
 
-/// `ForkAndExec` is in the danger zone because it can be used to start another process, including
-/// more privileged ones. That process will still be under seccomp's restrictions (see
+/// [`ForkAndExec`] is in the danger zone because it can be used to start another process,
+/// including more privileged ones. That process will still be under seccomp's restrictions (see
 /// `tests/inherit_filters.rs`) but depending on your filter it could still do bad things.
 ///
 /// Note that this also allows the `clone` syscall.
@@ -137,7 +137,7 @@ pub struct Time {
 
 // HashSet::insert returns a bool and unused_results is being triggered.
 impl Time {
-    /// Create a new Time `RuleSet` with nothing allowed by default.
+    /// Create a new Time [`RuleSet`] with nothing allowed by default.
     #[must_use]
     pub fn nothing() -> Time {
         Time {

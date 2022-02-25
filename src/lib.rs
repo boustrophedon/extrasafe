@@ -9,7 +9,7 @@
 //! extrasafe is a library that makes it easy to improve your program's security by selectively
 //! allowing the syscalls it can perform via the Linux kernel's seccomp facilities.
 //!
-//! See the `SafetyContext` struct's documentation and the tests/ and examples/ directories for
+//! See the [`SafetyContext`] struct's documentation and the tests/ and examples/ directories for
 //! more information on how to use it.
 
 use libseccomp::*;
@@ -51,10 +51,10 @@ impl Rule {
 }
 
 #[derive(Debug, Clone)]
-/// A `Rule` labeled with the profile it originated from. Internal-only.
+/// A [`Rule`] labeled with the profile it originated from. Internal-only.
 struct LabeledRule(pub &'static str, pub Rule);
 
-/// A `RuleSet` is a collection of seccomp Rules that enable a functionality.
+/// A [`RuleSet`] is a collection of seccomp Rules that enable a functionality.
 pub trait RuleSet {
     /// A simple rule is one that just allows the syscall without restriction.
     fn simple_rules(&self) -> Vec<syscalls::Sysno>;
@@ -89,8 +89,8 @@ pub trait RuleSet {
 /// A struct representing a set of rules to be loaded into a seccomp filter and applied to the
 /// current thread, or all threads in the current process.
 ///
-/// Create with `new()`. Add `RuleSet`s with `enable()`, and then use `apply_to_current_thread()`
-/// to apply the filters to the current thread, or `apply_to_all_threads()` to apply the filter to
+/// Create with [`new()`](Self::new). Add [`RuleSet`]s with [`enable()`](Self::enable), and then use [`apply_to_current_thread()`](Self::apply_to_current_thread)
+/// to apply the filters to the current thread, or [`apply_to_all_threads()`](Self::apply_to_all_threads) to apply the filter to
 /// all threads in the process.
 pub struct SafetyContext {
     /// May either be a single simple rule or multiple conditional rules, but not both.
@@ -98,8 +98,9 @@ pub struct SafetyContext {
 }
 
 impl SafetyContext {
-    /// Create a new `SafetyContext`. The seccomp filters will not be loaded until either
-    /// `apply_to_current_thread` or `apply_to_all_threads` is called.
+    /// Create a new [`SafetyContext`]. The seccomp filters will not be loaded until either
+    /// [`apply_to_current_thread`](Self::apply_to_current_thread) or
+    /// [`apply_to_all_threads`](Self::apply_to_all_threads) is called.
     pub fn new() -> SafetyContext {
         #[cfg(not(target_arch = "x86_64"))]
         {
@@ -111,10 +112,10 @@ impl SafetyContext {
         }
     }
 
-    /// Enable the simple and conditional rules provided by the `RuleSet`.
+    /// Enable the simple and conditional rules provided by the [`RuleSet`].
     ///
     /// # Errors
-    /// Will return `ExtraSafeError::ConditionalNoEffectError` if a conditional rule is enabled at
+    /// Will return [`ExtraSafeError::ConditionalNoEffectError`] if a conditional rule is enabled at
     /// the same time as a simple rule for a syscall, which would override the conditional rule.
     pub fn enable(mut self, policy: impl RuleSet) -> Result<SafetyContext, ExtraSafeError> {
         // Note that we can't do this check in each individual gather_rules because different
@@ -163,20 +164,20 @@ impl SafetyContext {
         Ok(self)
     }
 
-    /// Load the `SafetyContext`'s rules into a seccomp filter and apply the filter to the current
+    /// Load the [`SafetyContext`]'s rules into a seccomp filter and apply the filter to the current
     /// thread.
     ///
     /// # Errors
-    /// May return `ExtraSafeError::SeccompError`.
+    /// May return [`ExtraSafeError::SeccompError`].
     pub fn apply_to_current_thread(self) -> Result<(), ExtraSafeError> {
         self.apply(false)
     }
 
-    /// Load the `SafetyContext`'s rules into a seccomp filter and apply the filter to all threads in
+    /// Load the [`SafetyContext`]'s rules into a seccomp filter and apply the filter to all threads in
     /// this process.
     ///
     /// # Errors
-    /// May return `ExtraSafeError::SeccompError`.
+    /// May return [`ExtraSafeError::SeccompError`].
     pub fn apply_to_all_threads(self) -> Result<(), ExtraSafeError> {
         self.apply(true)
     }
@@ -219,7 +220,7 @@ impl SafetyContext {
 }
 
 #[derive(Debug, Error)]
-/// The error type produced by `extrasafe::SafetyContext`
+/// The error type produced by [`SafetyContext`]
 pub enum ExtraSafeError {
     #[error("extrasafe is only usable on Linux.")]
     /// Error created when trying to apply filters on non-Linux operating systems. Should never

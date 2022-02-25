@@ -1,4 +1,4 @@
-//! Contains a `RuleSet` for allowing IO-related syscalls, like file opening, reading, and writing.
+//! Contains a [`RuleSet`] for allowing IO-related syscalls, like file opening, reading, and writing.
 
 use std::collections::{HashSet, HashMap};
 use std::fs::File;
@@ -22,7 +22,7 @@ const IO_METADATA_SYSCALLS: &[Sysno] = &[Sysno::stat, Sysno::fstat, Sysno::newfs
                                          Sysno::getcwd];
 const IO_CLOSE_SYSCALLS: &[Sysno] = &[Sysno::close, Sysno::close_range];
 
-/// A `RuleSet` representing syscalls that perform IO - open/close/read/write/seek/stat.
+/// A [`RuleSet`] representing syscalls that perform IO - open/close/read/write/seek/stat.
 ///
 /// Configurable to allow subsets of IO syscalls and specific fds.
 pub struct SystemIO {
@@ -75,7 +75,7 @@ impl SystemIO {
     ///
     /// # Security
     ///
-    /// The reason this function returns a `YesReally` is because it's easy to accidentally combine
+    /// The reason this function returns a [`YesReally`] is because it's easy to accidentally combine
     /// it with another ruleset that allows `write` - for example the Network ruleset - even if you
     /// only want to read files.
     #[must_use]
