@@ -145,15 +145,6 @@ impl Time {
         }
     }
 
-    /// Allows you to set the system time. You really probably don't need this.
-    #[must_use]
-    pub fn allow_settime(mut self) -> YesReally<Time> {
-        self.allowed
-            .extend([Sysno::clock_settime, Sysno::clock_adjtime]);
-
-        YesReally::new(self)
-    }
-
     /// Allows you to get the system time. This is in the danger zone because it made sense to put
     /// the time functions together, and also technically highres timers can be used for timing
     /// attacks (but a determined attacker can use other methods besides just calling gettime).
