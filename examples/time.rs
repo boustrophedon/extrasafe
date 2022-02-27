@@ -1,5 +1,5 @@
 use extrasafe::{SafetyContext, builtins};
-use builtins::{danger_zone::Time, SystemIO};
+use builtins::{Time, SystemIO};
 
 #[test]
 fn call_main() {
@@ -13,8 +13,8 @@ fn main() {
                 .allow_stdout()
         ).unwrap()
 
-        // Note that this doesn't really have an effect when using glibc, see comment on Time
-        // ruleset
+        // On most systems this won't have an effect because glibc and musl both use vDSOs that
+        // compute time directly via rdtsc rather than calling the syscalls directly.
         .enable(
             Time::nothing()
                 .allow_gettime()
