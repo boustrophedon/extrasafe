@@ -65,23 +65,6 @@ pub trait RuleSet {
 
     /// The name of the profile.
     fn name(&self) -> &'static str;
-
-    /// Gather unconditional and conditional rules to be provided to the seccomp context.
-    fn gather_rules(&self) -> Vec<Rule> {
-        let base_syscalls = self.simple_rules();
-        let mut rules = self.conditional_rules();
-        for syscall in base_syscalls {
-            if !rules.contains_key(&syscall) {
-                let rule = Rule::new(syscall);
-                rules.entry(syscall)
-                    .or_insert_with(Vec::new)
-                    .push(rule);
-            }
-        }
-
-        rules.into_values().flatten()
-            .collect()
-    }
 }
 
 #[must_use]
@@ -112,6 +95,24 @@ impl SafetyContext {
         }
     }
 
+    /// Gather unconditional and conditional rules to be provided to the seccomp context.
+    #[allow(clippy::needless_pass_by_value)]
+    fn gather_rules(rules: impl RuleSet) -> Vec<Rule> {
+        let base_syscalls = rules.simple_rules();
+        let mut rules = rules.conditional_rules();
+        for syscall in base_syscalls {
+            if !rules.contains_key(&syscall) {
+                let rule = Rule::new(syscall);
+                rules.entry(syscall)
+                    .or_insert_with(Vec::new)
+                    .push(rule);
+            }
+        }
+
+        rules.into_values().flatten()
+            .collect()
+    }
+
     /// Enable the simple and conditional rules provided by the [`RuleSet`].
     ///
     /// # Errors
@@ -121,10 +122,10 @@ impl SafetyContext {
         // Note that we can't do this check in each individual gather_rules because different
         // policies may enable the same syscall.
 
-        let new_rules = policy
-            .gather_rules()
+        let policy_name = policy.name();
+        let new_rules = SafetyContext::gather_rules(policy)
             .into_iter()
-            .map(|rule| LabeledRule(policy.name(), rule));
+            .map(|rule| LabeledRule(policy_name, rule));
 
         for labeled_new_rule in new_rules {
             let new_rule = &labeled_new_rule.1;
