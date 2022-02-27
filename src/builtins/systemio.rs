@@ -189,14 +189,14 @@ impl SystemIO {
         let fd = file.as_raw_fd();
         for &syscall in IO_READ_SYSCALLS {
             let rule = Rule::new(syscall)
-                .and_condition(scmp_cmp!($arg0 == fd as u64));
+                .and_condition(scmp_cmp!($arg0 == fd.try_into().expect("fd provided was negative")));
             self.custom.entry(syscall)
                 .or_insert_with(Vec::new)
                 .push(rule);
         }
         for &syscall in IO_METADATA_SYSCALLS {
             let rule = Rule::new(syscall)
-                .and_condition(scmp_cmp!($arg0 == fd as u64));
+                .and_condition(scmp_cmp!($arg0 == fd.try_into().expect("fd provided was negative")));
             self.custom.entry(syscall)
                 .or_insert_with(Vec::new)
                 .push(rule);
@@ -212,7 +212,7 @@ impl SystemIO {
     pub fn allow_file_write(mut self, file: &File) -> SystemIO {
         let fd = file.as_raw_fd();
         let rule = Rule::new(Sysno::write)
-            .and_condition(scmp_cmp!($arg0 == fd as u64));
+            .and_condition(scmp_cmp!($arg0 == fd.try_into().expect("fd provided was negative")));
         self.custom.entry(Sysno::write)
             .or_insert_with(Vec::new)
             .push(rule);
