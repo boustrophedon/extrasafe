@@ -16,7 +16,7 @@ jobs:
     # - name: Run cargo fmt
     #   run: cargo fmt --all -- --check
       - name: Run cargo clippy
-        run: cargo clippy --all-targets --all-features -- --deny warnings 
+        run: ./clippy.sh
   test:
     name: Unit Tests
     runs-on: ubuntu-latest
