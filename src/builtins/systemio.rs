@@ -181,9 +181,13 @@ impl SystemIO {
         self
     }
 
-    /// Allow reading a given open File. Note that with just this, you will not be able to close
-    /// the file under this context. In most cases that shouldn't really matter since presumably
-    /// you've opened it in a context that has open (and therefore close) capabilities.
+    /// Allow reading a given open [File]. Note that with just this function, you will not be able
+    /// to close the file under this context.
+    ///
+    /// # Security considerations
+    ///
+    /// If another file or socket is opened after the file provided to this function is closed,
+    /// it's possible that the fd will be reused and therefore may be read from.
     #[must_use]
     pub fn allow_file_read(mut self, file: &File) -> SystemIO {
         let fd = file.as_raw_fd();
@@ -205,9 +209,13 @@ impl SystemIO {
         self
     }
 
-    /// Allow writing to a given open File. Note that with just this, you will not be able to close
-    /// the file under this context. In most cases that shouldn't really matter since presumably
-    /// you've opened it in a context that has open (and therefore close) capabilities.
+    /// Allow writing to a given open [File]. Note that with just this, you will not be able to
+    /// close the file under this context.
+    ///
+    /// # Security considerations
+    ///
+    /// If another file or socket is opened after the file provided to this function is closed,
+    /// it's possible that the fd will be reused and therefore may be written to.
     #[must_use]
     pub fn allow_file_write(mut self, file: &File) -> SystemIO {
         let fd = file.as_raw_fd();
