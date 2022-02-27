@@ -130,6 +130,10 @@ impl RuleSet for ForkAndExec {
 /// that high-resolution clocks can technically be used to perform timing attacks in some cases.
 /// I'm on the fence whether that's really enough of a threat to keep the gettime and nanosleep
 /// calls here vs in default allow list, but I thought I'd err on the side of caution.
+///
+/// Additionally, glibc uses the rdtsc register to compute time directly, and so `clock_gettime`
+/// isn't even called to get the time. For that reason alone it can probably just be put in the
+/// default allowed list.
 pub struct Time {
     /// Syscalls that are allowed
     allowed: HashSet<Sysno>,
