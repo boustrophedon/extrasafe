@@ -42,7 +42,13 @@ Additionally, we support slightly advanced use-cases:
 
 **Application** developers who want to tightly control what their programs can and cannot do.
 
-If you're developing a library to be used in other programs, you probably don't want to use extrasafe because you don't know what people who are using your library are doing. As an exception, your library might want to use seccomp if it's spawning a worker thread whose computation is entirely controlled by your library.
+If you're developing a library, there are three things you can do:
+
+1. Provide an `extrasafe::RuleSet` that covers the functionality of your library
+2. Provide some kind of `init` function that does any IO-related work ahead of time (e.g. reading config files, SSL certificates)
+3. If your library has any kind of independent worker threads, you can use extrasafe inside the worker thread.
+
+You don't want to use extrasafe directly in your library because you don't know what other functionality your dependents will be using.
 
 **Currently extrasafe only supports `x86_64`. If you'd like to help support other archs please open an issue.**
 
