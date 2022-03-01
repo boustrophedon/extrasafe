@@ -7,11 +7,6 @@ use warp::Filter;
 
 use std::thread;
 
-#[test]
-fn run_main() {
-    main()
-}
-
 /// Set up a warp server, enable `SafetyContext` to prevent further socket creations and bindings,
 /// make and recieve a request successfully, then try to bind another server and fail.
 fn main() {

@@ -1,11 +1,6 @@
 use extrasafe::{SafetyContext, builtins};
 use builtins::{Time, SystemIO};
 
-#[test]
-fn call_main() {
-    main();
-}
-
 fn main() {
     SafetyContext::new()
         .enable(

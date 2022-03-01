@@ -32,11 +32,6 @@ use warp::Filter;
 
 use std::sync::Arc;
 
-#[test]
-fn run_main() {
-    main()
-}
-
 /// This is essentially the wire format for our DB connection
 enum DBMsg {
     // Send a list of all the messages in the db over the channel.
