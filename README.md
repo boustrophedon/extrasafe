@@ -1,6 +1,6 @@
 # extrasafe
 
-[![Coverage Status](https://coveralls.io/repos/github/boustrophedon/extrasafe/badge.svg?branch=master)](https://coveralls.io/github/boustrophedon/extrasafe?branch=master) [![CI Status](https://github.com/boustrophedon/extrasafe/actions/workflows/build-test.yaml/badge.svg)](https://github.com/boustrophedon/extrasafe/actions/workflows/build-test.yaml) ![crates.io](https://img.shields.io/crates/v/extrasafe) ![docs.rs](https://img.shields.io/docsrs/extrasafe)
+[![Coverage Status](https://coveralls.io/repos/github/boustrophedon/extrasafe/badge.svg?branch=master)](https://coveralls.io/github/boustrophedon/extrasafe?branch=master) [![CI Status](https://github.com/boustrophedon/extrasafe/actions/workflows/build-test.yaml/badge.svg)](https://github.com/boustrophedon/extrasafe/actions/workflows/build-test.yaml) [![crates.io](https://img.shields.io/crates/v/extrasafe)](https://crates.io/crates/extrasafe) [![docs.rs](https://img.shields.io/docsrs/extrasafe)](https://docs.rs/extrasafe/latest/extrasafe/)
 
 *"trust noone not even urself" - internet man*
 
