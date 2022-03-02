@@ -14,7 +14,7 @@
 //! capability as the sum of all the threads' capabilities because it could e.g. change the buffer
 //! that a thread that can write to files is using to write from.
 //!
-//! In order to get more secure sandboxing, you'd want to have each thread run in separate
+//! In order to get more secure isolation, you'd want to have each thread run in separate
 //! processes and communicate over a system IPC mechanism like pipes or local sockets. (This is
 //! what web browsers do, for example.) You could maybe also play around with using pthreads
 //! directly to pass the right flags to clone to not share memory when creating new threads, but I

@@ -6,7 +6,7 @@ authors = ["Harry Stern <harry@harrystern.net>",]
 description = "Make your code extrasafe by preventing it from calling unneeded syscalls."
 repository = "https://github.com/boustrophedon/extrasafe"
 license = "MIT"
-keywords = ["security", "seccomp", "sandbox", "syscall"]
+keywords = ["security", "seccomp", "syscall"]
 categories = ["os::linux-apis"]
 
 [dependencies]
