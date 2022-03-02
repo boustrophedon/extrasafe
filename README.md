@@ -38,6 +38,8 @@ Additionally, we support slightly advanced use-cases:
   - Allow read/write on specific files (opened before loading the seccomp filters)
   - You can define your own set of syscalls to allow by implementing the RuleSet trait.
 
+Check out the [**user guide here**](https://github.com/boustrophedon/extrasafe/blob/master/user-guide.md)
+
 # Who is extrasafe for?
 
 **Application** developers who want to tightly control what their programs can and cannot do.
@@ -71,7 +73,7 @@ So you can be extra safe. Suppose your program has a dependency with an undiscov
 
 # Caveats
 
-Seccomp filters don't allow you to do some things, and are a somewhat blunt tool.
+Seccomp filters are a somewhat blunt tool.
 
 - They don't allow you to filter by path name in `open` calls, or indeed any syscall arguments that are pointers (but see below about Landlock!)
 	- In particular, this can make SSL somewhat annoying because you have to open a bunch of files to check for certificates.

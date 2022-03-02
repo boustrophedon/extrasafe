@@ -1,6 +1,6 @@
 [package]
 name = "extrasafe"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 authors = ["Harry Stern <harry@harrystern.net>",]
 description = "Make your code extrasafe by preventing it from calling unneeded syscalls."
