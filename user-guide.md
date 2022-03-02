@@ -75,12 +75,12 @@ Extrasafe starts from a default-deny state, and each time you `enable` a RuleSet
 
 One thing this impacts is where syscalls are used in multiple contexts, particularly the `read` and `write` syscalls: If you restrict the fds you can call `read` on, intending to limit access to the filesystem, you may also intentionally block yourself from `read`ing from a socket.
 
-In order to get around this issue, you can do all your fs operations on one thread/process and your network operations in another, and communicate via e.g. a unix domain socket. See [examples/ipc\_server\_with\_database.rs](https://github.com/boustrophedon/extrasafe/blob/master/examples/ipc_server_with_database.rs) for an example of using communicating processes to achieve this separation. 
+In order to get around this issue, you can do all your filesystem operations on one thread/process and your network operations in another, and communicate via e.g. a unix domain socket. See [examples/ipc\_server\_with\_database.rs](https://github.com/boustrophedon/extrasafe/blob/master/examples/ipc_server_with_database.rs) for an example of using communicating processes to achieve this separation. 
 
 
 ### Syscall pointer arguments
 
-Seccomp, the underlying functionality provided by the kernel that extrasafe uses, doesn't allow comparisons on arguments that are pointers, so for example we can't filter on filepath for `open` syscalls because the path is a `char *`.
+Seccomp, the underlying functionality provided by the kernel that extrasafe uses, doesn't allow comparisons on arguments that are pointers, so for example we can't filter on file path for `open` syscalls because the path is a `char *`.
 
 ## Defining your own ruleset
 
