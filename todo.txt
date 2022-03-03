@@ -23,6 +23,14 @@
   need to determine what syscalls crossbeam channels need (if any) vs flume (if any) (std mpsc is going to be deprecated)
   - feature flag for macro with return value over channel
 
+# Multiplatform
+bsd: pledge
+osx: Seatbelt (`sandboxd`), see gaol below
+windows: ProcessSystemCallDisablePolicy?, see chrome
+
+see
+https://github.com/servo/gaol/
+and chrome?
 
 # New functionality
 https://chromium.googlesource.com/chromium/src.git/+/HEAD/docs/linux/sandboxing.md#User-namespaces-sandbox
@@ -45,6 +53,15 @@ Relatively easy to remove: just generate the code from the proc macros and commi
 This is the hardest part to remove as we'd have to either rewrite the bpf generator, or record the output of libseccomp for our specific use-cases and commit it to the repository. For cases like allowing lists of fds to be read from/written to, we'd have to do some additional work to template the generated bpf code, which is essentially what libseccomp is already doing.
 
 There are actually two levels of dependencies here: [The Rust bindings](https://github.com/libseccomp-rs/libseccomp-rs) and [the actual C library](https://github.com/seccomp/libseccomp)
+
+maybe use the code from gaol?
+https://github.com/servo/gaol/
+https://github.com/servo/gaol/blob/4544946c5c922ee619a932ae5c3fd1d26f143384/platform/linux/seccomp.rs#L217
+
+also can consider seccompiler, which at least brings the code into pure rust
+and possibly gives us more flexibility on filtering syscall arguments, which is
+a weakness of libseccomp
+https://crates.io/crates/seccompiler
 
 ### syscalls
 Relatively easy to remove by copying directly into the repository, but comes with a maintenance burden of having to update the lists when new syscalls are created.
