@@ -102,7 +102,7 @@ impl SafetyContext {
 
     /// Gather unconditional and conditional rules to be provided to the seccomp context.
     #[allow(clippy::needless_pass_by_value)]
-    fn gather_rules(rules: impl RuleSet) -> Vec<Rule> {
+    fn gather_rules(rules: impl RuleSet) -> HashMap<syscalls::Sysno, Vec<Rule>> {
         let base_syscalls = rules.simple_rules();
         let mut rules = rules.conditional_rules();
         for syscall in base_syscalls {
@@ -114,8 +114,7 @@ impl SafetyContext {
             }
         }
 
-        rules.into_values().flatten()
-            .collect()
+        rules
     }
 
     /// Enable the simple and conditional rules provided by the [`RuleSet`].
@@ -127,44 +126,34 @@ impl SafetyContext {
         // Note that we can't do this check in each individual gather_rules because different
         // policies may enable the same syscall.
 
-        let policy_name = policy.name();
-        let new_rules = SafetyContext::gather_rules(policy)
-            .into_iter()
-            .map(|rule| LabeledRule(policy_name, rule));
+        let new_policy = policy.name();
+        let new_rules = SafetyContext::gather_rules(policy);
 
-        for labeled_new_rule in new_rules {
-            let new_rule = &labeled_new_rule.1;
-            let syscall = &new_rule.syscall;
-
-            if let Some(existing_rules) = self.rules.get(syscall) {
-                for labeled_existing_rule in existing_rules {
-                    let existing_rule = &labeled_existing_rule.1;
-
-                    debug_assert_eq!(new_rule.syscall, existing_rule.syscall);
+        for (syscall, rules) in new_rules {
+            let mut rules_for_syscall = self.rules.entry(syscall).or_default();
+            for new_rule in rules {
+                for &LabeledRule(existing_policy, existing_rule) in rules_for_syscall {
 
                     let new_is_conditional = new_rule.is_conditional();
                     let existing_is_conditional = existing_rule.is_conditional();
 
                     if existing_is_conditional && !new_is_conditional {
                         return Err(ExtraSafeError::ConditionalNoEffectError(
-                            new_rule.syscall,
-                            labeled_existing_rule.0,
-                            labeled_new_rule.0,
+                            syscall,
+                            existing_policy,
+                            new_policy,
                         ));
                     } else if new_is_conditional && !existing_is_conditional {
                         return Err(ExtraSafeError::ConditionalNoEffectError(
-                            new_rule.syscall,
-                            labeled_new_rule.0,
-                            labeled_existing_rule.0,
+                            syscall,
+                            new_policy,
+                            existing_policy,
                         ));
                     }
                 }
-            }
 
-            self.rules
-                .entry(*syscall)
-                .or_default()
-                .push(labeled_new_rule);
+                rules_for_syscall.push(LabeledRule(new_policy, new_rule));
+            }
         }
 
         Ok(self)
