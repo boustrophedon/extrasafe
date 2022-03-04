@@ -13,7 +13,6 @@
 //! more information on how to use it.
 
 use libseccomp::*;
-use thiserror::Error;
 
 pub mod builtins;
 
@@ -137,18 +136,20 @@ impl SafetyContext {
                     let same_syscall = new_rule.syscall == existing_rule.syscall;
 
                     if same_syscall && new_is_simple && !existing_is_simple {
-                        return Err(ExtraSafeError::ConditionalNoEffectError(
+                        return Err(ConditionalNoEffectError::new(
                             new_rule.syscall,
                             labeled_existing_rule.0,
                             labeled_new_rule.0,
-                        ));
+                        )
+                        .into());
                     }
                     if same_syscall && !new_is_simple && existing_is_simple {
-                        return Err(ExtraSafeError::ConditionalNoEffectError(
+                        return Err(ConditionalNoEffectError::new(
                             new_rule.syscall,
                             labeled_new_rule.0,
                             labeled_existing_rule.0,
-                        ));
+                        )
+                        .into());
                     }
                 }
             }
@@ -215,17 +216,55 @@ impl SafetyContext {
     }
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, thiserror::Error)]
 /// The error type produced by [`SafetyContext`]
 pub enum ExtraSafeError {
     #[error("extrasafe is only usable on Linux.")]
     /// Error created when trying to apply filters on non-Linux operating systems. Should never
     /// occur.
     UnsupportedOSError,
-    #[error("A conditional rule on syscall `{0}` from RuleSet `{1}` would be overridden by a simple rule from RuleSet `{2}`.")]
+    #[error(transparent)]
     /// Error created when a simple rule would override a conditional rule.
-    ConditionalNoEffectError(syscalls::Sysno, &'static str, &'static str),
+    ConditionalNoEffectError(#[from] ConditionalNoEffectError),
     #[error("A libseccomp error occured. {0:?}")]
     /// An error from the underlying seccomp library.
     SeccompError(#[from] libseccomp::error::SeccompError),
+}
+
+#[derive(Debug, thiserror::Error)]
+#[error("A conditional rule on syscall `{syscall}` from RuleSet `{ruleset}` would be overridden by a simple rule from RuleSet `{overridden_by}`.")]
+/// Error created when a simple rule would override a conditional rule.
+pub struct ConditionalNoEffectError {
+    syscall: syscalls::Sysno,
+    ruleset: &'static str,
+    overridden_by: &'static str,
+}
+
+impl ConditionalNoEffectError {
+    pub fn new(
+        syscall: syscalls::Sysno,
+        ruleset: &'static str,
+        overridden_by: &'static str,
+    ) -> Self {
+        Self {
+            syscall,
+            ruleset,
+            overridden_by,
+        }
+    }
+
+    /// The syscall whose conditional rule was overridden by a simple rule.
+    pub fn syscall(&self) -> syscalls::Sysno {
+        self.syscall
+    }
+
+    /// The ruleset which contained the conditional rule.
+    pub fn ruleset(&self) -> &str {
+        self.ruleset
+    }
+
+    /// The ruleset which contained the simple rule which overrode the conditional rule.
+    pub fn overridden_by(&self) -> &str {
+        self.overridden_by
+    }
 }
