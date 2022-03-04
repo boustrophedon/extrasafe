@@ -112,9 +112,12 @@ impl SafetyContext {
     /// Enable the simple and conditional rules provided by the [`RuleSet`].
     ///
     /// # Errors
-    /// Will return [`ExtraSafeError::ConditionalNoEffectError`] if a conditional rule is enabled at
+    /// Will return [`ConditionalNoEffectError`] if a conditional rule is enabled at
     /// the same time as a simple rule for a syscall, which would override the conditional rule.
-    pub fn enable(mut self, policy: impl RuleSet) -> Result<SafetyContext, Error> {
+    pub fn enable(
+        mut self,
+        policy: impl RuleSet,
+    ) -> Result<SafetyContext, ConditionalNoEffectError> {
         // Note that we can't do this check in each individual gather_rules because different
         // policies may enable the same syscall.
 
@@ -140,16 +143,14 @@ impl SafetyContext {
                             new_rule.syscall,
                             labeled_existing_rule.0,
                             labeled_new_rule.0,
-                        )
-                        .into());
+                        ));
                     }
                     if same_syscall && !new_is_simple && existing_is_simple {
                         return Err(ConditionalNoEffectError::new(
                             new_rule.syscall,
                             labeled_new_rule.0,
                             labeled_existing_rule.0,
-                        )
-                        .into());
+                        ));
                     }
                 }
             }
