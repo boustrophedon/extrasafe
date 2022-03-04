@@ -48,6 +48,11 @@ impl Rule {
 
         self
     }
+
+    /// Checks if the rule has conditions that determine its applicability.
+    pub fn is_conditional(&self) -> bool {
+        !self.comparators.is_empty()
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -135,18 +140,18 @@ impl SafetyContext {
                 for labeled_existing_rule in existing_rules {
                     let existing_rule = &labeled_existing_rule.1;
 
-                    let new_is_simple = new_rule.comparators.is_empty();
-                    let existing_is_simple = existing_rule.comparators.is_empty();
-                    let same_syscall = new_rule.syscall == existing_rule.syscall;
+                    debug_assert_eq!(new_rule.syscall, existing_rule.syscall);
 
-                    if same_syscall && new_is_simple && !existing_is_simple {
+                    let new_is_conditional = new_rule.is_conditional();
+                    let existing_is_conditional = existing_rule.is_conditional();
+
+                    if existing_is_conditional && !new_is_conditional {
                         return Err(ExtraSafeError::ConditionalNoEffectError(
                             new_rule.syscall,
                             labeled_existing_rule.0,
                             labeled_new_rule.0,
                         ));
-                    }
-                    if same_syscall && !new_is_simple && existing_is_simple {
+                    } else if new_is_conditional && !existing_is_conditional {
                         return Err(ExtraSafeError::ConditionalNoEffectError(
                             new_rule.syscall,
                             labeled_new_rule.0,
@@ -158,7 +163,7 @@ impl SafetyContext {
 
             self.rules
                 .entry(*syscall)
-                .or_insert_with(Vec::new)
+                .or_default()
                 .push(labeled_new_rule);
         }
 
