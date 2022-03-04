@@ -114,7 +114,7 @@ impl SafetyContext {
     /// # Errors
     /// Will return [`ExtraSafeError::ConditionalNoEffectError`] if a conditional rule is enabled at
     /// the same time as a simple rule for a syscall, which would override the conditional rule.
-    pub fn enable(mut self, policy: impl RuleSet) -> Result<SafetyContext, ExtraSafeError> {
+    pub fn enable(mut self, policy: impl RuleSet) -> Result<SafetyContext, Error> {
         // Note that we can't do this check in each individual gather_rules because different
         // policies may enable the same syscall.
 
@@ -168,7 +168,7 @@ impl SafetyContext {
     ///
     /// # Errors
     /// May return [`ExtraSafeError::SeccompError`].
-    pub fn apply_to_current_thread(self) -> Result<(), ExtraSafeError> {
+    pub fn apply_to_current_thread(self) -> Result<(), Error> {
         self.apply(false)
     }
 
@@ -177,17 +177,17 @@ impl SafetyContext {
     ///
     /// # Errors
     /// May return [`ExtraSafeError::SeccompError`].
-    pub fn apply_to_all_threads(self) -> Result<(), ExtraSafeError> {
+    pub fn apply_to_all_threads(self) -> Result<(), Error> {
         self.apply(true)
     }
 
-    fn apply(mut self, all_threads: bool) -> Result<(), ExtraSafeError> {
+    fn apply(mut self, all_threads: bool) -> Result<(), Error> {
         // This guard will not currently ever be hit because libseccomp-rs will fail to build
         // before we get here. If we ever move off of it or if libseccomp-rs decides to do a
         // no-op build on non-linux platform, having this guard here means end users will still
         // have to explicitly acknowledge that extrasafe isn't running on that platform.
         if cfg!(not(target_os = "linux")) {
-            return Err(ExtraSafeError::UnsupportedOSError);
+            return Err(Error::UnsupportedOs);
         }
 
         let mut ctx = ScmpFilterContext::new_filter(ScmpAction::Errno(libc::EPERM))?;
@@ -218,17 +218,17 @@ impl SafetyContext {
 
 #[derive(Debug, thiserror::Error)]
 /// The error type produced by [`SafetyContext`]
-pub enum ExtraSafeError {
+pub enum Error {
     #[error("extrasafe is only usable on Linux.")]
     /// Error created when trying to apply filters on non-Linux operating systems. Should never
     /// occur.
-    UnsupportedOSError,
+    UnsupportedOs,
     #[error(transparent)]
     /// Error created when a simple rule would override a conditional rule.
-    ConditionalNoEffectError(#[from] ConditionalNoEffectError),
+    ConditionalNoEffect(#[from] ConditionalNoEffectError),
     #[error("A libseccomp error occured. {0:?}")]
     /// An error from the underlying seccomp library.
-    SeccompError(#[from] libseccomp::error::SeccompError),
+    Seccomp(#[from] libseccomp::error::SeccompError),
 }
 
 #[derive(Debug, thiserror::Error)]
