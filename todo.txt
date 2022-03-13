@@ -43,6 +43,8 @@ SafetyContext::new()
 .isolate_process()
 ``` 
 
+see also https://blog.lizzie.io/linux-containers-in-500-loc.html
+
 # Remove all dependencies
 If you're using extrasafe to provide extra security, it then becomes a target for vulnerabilities, including supply-chain attacks.
 

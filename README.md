@@ -71,6 +71,8 @@ So you can be extra safe. Suppose your program has a dependency with an undiscov
     - If your program doesn't need network access, don't give it access (but then you aren't really exploitable anyway in most cases)
     - Logging in a separate thread that doesn't have network access
 - Exploits involving executing SUID-root binaries rely on being able to fork and exec.
+- https://nickgregory.me/linux/security/2022/03/12/cve-2022-25636/
+  - nftables relies on being able to create sockets with type `AF_NETLINK`, which can be filtered with seccomp
 
 # Caveats
 
