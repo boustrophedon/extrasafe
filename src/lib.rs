@@ -13,7 +13,6 @@
 //! more information on how to use it.
 
 use libseccomp::*;
-use thiserror::Error;
 
 pub mod builtins;
 
@@ -103,22 +102,22 @@ impl SafetyContext {
         for syscall in base_syscalls {
             if !rules.contains_key(&syscall) {
                 let rule = Rule::new(syscall);
-                rules.entry(syscall)
-                    .or_insert_with(Vec::new)
-                    .push(rule);
+                rules.entry(syscall).or_insert_with(Vec::new).push(rule);
             }
         }
 
-        rules.into_values().flatten()
-            .collect()
+        rules.into_values().flatten().collect()
     }
 
     /// Enable the simple and conditional rules provided by the [`RuleSet`].
     ///
     /// # Errors
-    /// Will return [`ExtraSafeError::ConditionalNoEffectError`] if a conditional rule is enabled at
+    /// Will return [`ConditionalNoEffectError`] if a conditional rule is enabled at
     /// the same time as a simple rule for a syscall, which would override the conditional rule.
-    pub fn enable(mut self, policy: impl RuleSet) -> Result<SafetyContext, ExtraSafeError> {
+    pub fn enable(
+        mut self,
+        policy: impl RuleSet,
+    ) -> Result<SafetyContext, ConditionalNoEffectError> {
         // Note that we can't do this check in each individual gather_rules because different
         // policies may enable the same syscall.
 
@@ -140,14 +139,14 @@ impl SafetyContext {
                     let same_syscall = new_rule.syscall == existing_rule.syscall;
 
                     if same_syscall && new_is_simple && !existing_is_simple {
-                        return Err(ExtraSafeError::ConditionalNoEffectError(
+                        return Err(ConditionalNoEffectError::new(
                             new_rule.syscall,
                             labeled_existing_rule.0,
                             labeled_new_rule.0,
                         ));
                     }
                     if same_syscall && !new_is_simple && existing_is_simple {
-                        return Err(ExtraSafeError::ConditionalNoEffectError(
+                        return Err(ConditionalNoEffectError::new(
                             new_rule.syscall,
                             labeled_new_rule.0,
                             labeled_existing_rule.0,
@@ -170,7 +169,7 @@ impl SafetyContext {
     ///
     /// # Errors
     /// May return [`ExtraSafeError::SeccompError`].
-    pub fn apply_to_current_thread(self) -> Result<(), ExtraSafeError> {
+    pub fn apply_to_current_thread(self) -> Result<(), Error> {
         self.apply(false)
     }
 
@@ -179,25 +178,24 @@ impl SafetyContext {
     ///
     /// # Errors
     /// May return [`ExtraSafeError::SeccompError`].
-    pub fn apply_to_all_threads(self) -> Result<(), ExtraSafeError> {
+    pub fn apply_to_all_threads(self) -> Result<(), Error> {
         self.apply(true)
     }
 
-    fn apply(mut self, all_threads: bool) -> Result<(), ExtraSafeError> {
+    fn apply(mut self, all_threads: bool) -> Result<(), Error> {
         // This guard will not currently ever be hit because libseccomp-rs will fail to build
         // before we get here. If we ever move off of it or if libseccomp-rs decides to do a
         // no-op build on non-linux platform, having this guard here means end users will still
         // have to explicitly acknowledge that extrasafe isn't running on that platform.
         if cfg!(not(target_os = "linux")) {
-            return Err(ExtraSafeError::UnsupportedOSError);
+            return Err(Error::UnsupportedOs);
         }
 
         let mut ctx = ScmpFilterContext::new_filter(ScmpAction::Errno(libc::EPERM))?;
 
         if all_threads {
             ctx.set_filter_attr(ScmpFilterAttr::CtlTsync, 1)?;
-        }
-        else {
+        } else {
             // this is the default but we set it just to be sure.
             ctx.set_filter_attr(ScmpFilterAttr::CtlTsync, 0)?;
         }
@@ -208,8 +206,7 @@ impl SafetyContext {
         for LabeledRule(_origin, rule) in self.rules.into_values().flatten() {
             if rule.comparators.is_empty() {
                 ctx.add_rule(ScmpAction::Allow, rule.syscall.id())?;
-            }
-            else {
+            } else {
                 ctx.add_rule_conditional(ScmpAction::Allow, rule.syscall.id(), &rule.comparators)?;
             }
         }
@@ -220,17 +217,55 @@ impl SafetyContext {
     }
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, thiserror::Error)]
 /// The error type produced by [`SafetyContext`]
-pub enum ExtraSafeError {
+pub enum Error {
     #[error("extrasafe is only usable on Linux.")]
     /// Error created when trying to apply filters on non-Linux operating systems. Should never
     /// occur.
-    UnsupportedOSError,
-    #[error("A conditional rule on syscall `{0}` from RuleSet `{1}` would be overridden by a simple rule from RuleSet `{2}`.")]
+    UnsupportedOs,
+    #[error(transparent)]
     /// Error created when a simple rule would override a conditional rule.
-    ConditionalNoEffectError(syscalls::Sysno, &'static str, &'static str),
+    ConditionalNoEffect(#[from] ConditionalNoEffectError),
     #[error("A libseccomp error occured. {0:?}")]
     /// An error from the underlying seccomp library.
-    SeccompError(#[from] libseccomp::error::SeccompError),
+    Seccomp(#[from] libseccomp::error::SeccompError),
+}
+
+#[derive(Debug, thiserror::Error)]
+#[error("A conditional rule on syscall `{syscall}` from RuleSet `{ruleset}` would be overridden by a simple rule from RuleSet `{overridden_by}`.")]
+/// Error created when a simple rule would override a conditional rule.
+pub struct ConditionalNoEffectError {
+    syscall: syscalls::Sysno,
+    ruleset: &'static str,
+    overridden_by: &'static str,
+}
+
+impl ConditionalNoEffectError {
+    pub fn new(
+        syscall: syscalls::Sysno,
+        ruleset: &'static str,
+        overridden_by: &'static str,
+    ) -> Self {
+        Self {
+            syscall,
+            ruleset,
+            overridden_by,
+        }
+    }
+
+    /// The syscall whose conditional rule was overridden by a simple rule.
+    pub fn syscall(&self) -> syscalls::Sysno {
+        self.syscall
+    }
+
+    /// The ruleset which contained the conditional rule.
+    pub fn ruleset(&self) -> &str {
+        self.ruleset
+    }
+
+    /// The ruleset which contained the simple rule which overrode the conditional rule.
+    pub fn overridden_by(&self) -> &str {
+        self.overridden_by
+    }
 }
