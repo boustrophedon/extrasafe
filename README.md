@@ -73,7 +73,8 @@ So you can be extra safe. Suppose your program has a dependency with an undiscov
 - Exploits involving executing SUID-root binaries rely on being able to fork and exec.
 - https://nickgregory.me/linux/security/2022/03/12/cve-2022-25636/
   - nftables relies on being able to create sockets with type `AF_NETLINK`, which can be filtered with seccomp
-
+- https://googleprojectzero.blogspot.com/2022/03/racing-against-clock-hitting-tiny.html
+  - many things involved here but dup and timerfd both aren't enabled by default
 # Caveats
 
 Seccomp filters are a somewhat blunt tool.
