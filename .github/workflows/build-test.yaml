@@ -49,10 +49,14 @@ jobs:
         uses: actions/checkout@v2
       - name: Install libseccomp
         run: sudo apt-get install libseccomp-dev
-      # See .tarpaulin.toml for configuration details
-      - name: Run cargo tarpaulin
-        uses: actions-rs/tarpaulin@v0.1
+      - name: Install Rust
+        run: rustup toolchain install nightly --component llvm-tools-preview
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+      - name: Generate code coverage
+        run: cargo llvm-cov --tests --examples --all-targets --all-features --workspace --lcov --output-path lcov.info
       - name: Upload coverage to coveralls
         uses: coverallsapp/github-action@master
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: lcov.info
