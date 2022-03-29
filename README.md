@@ -74,7 +74,10 @@ So you can be extra safe. Suppose your program has a dependency with an undiscov
 - https://nickgregory.me/linux/security/2022/03/12/cve-2022-25636/
   - nftables relies on being able to create sockets with type `AF_NETLINK`, which can be filtered with seccomp
 - https://googleprojectzero.blogspot.com/2022/03/racing-against-clock-hitting-tiny.html
-  - many things involved here but dup and timerfd both aren't enabled by default
+  - many things involved here but dup and timerfd both aren't enabled by default when using extrasafe
+- https://lwn.net/ml/oss-security/1b176761-5462-4f25-db12-1b988c81c34a@gmail.com/
+  - nftables again, `AF_NETLINK` sockets are disabled by default with extrasafe.
+
 # Caveats
 
 Seccomp filters are a somewhat blunt tool.
