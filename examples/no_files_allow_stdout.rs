@@ -44,3 +44,8 @@ fn main() {
         res.unwrap_err()
     );
 }
+
+#[test]
+fn run_main() {
+    main()
+}

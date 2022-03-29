@@ -129,3 +129,8 @@ fn main() {
     // assert_eq!(text, "hello seccomp");
     // println!("recieved response: {}", text);
 }
+
+#[test]
+fn run_main() {
+    main()
+}

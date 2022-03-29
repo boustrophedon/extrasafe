@@ -399,3 +399,8 @@ fn main() {
     db_child.kill().unwrap();
     webserver_child.kill().unwrap();
 }
+
+#[test]
+fn run_main() {
+    main()
+}

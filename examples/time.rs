@@ -19,3 +19,8 @@ fn main() {
     let time = std::time::SystemTime::now();
     println!("time gave us: {:#?}", time);
 }
+
+#[test]
+fn run_main() {
+    main()
+}

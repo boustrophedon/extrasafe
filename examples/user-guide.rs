@@ -62,3 +62,8 @@ fn main() {
     std::thread::spawn(simple_example).join().unwrap();
     std::thread::spawn(custom_ruleset).join().unwrap();
 }
+
+#[test]
+fn run_main() {
+    main()
+}

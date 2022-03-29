@@ -299,3 +299,8 @@ fn main() {
     let res3 = client3_thread.join();
     assert!(res3.is_ok(), "client3 failed: {:?}", res3.unwrap_err());
 }
+
+#[test]
+fn run_main() {
+    main()
+}
