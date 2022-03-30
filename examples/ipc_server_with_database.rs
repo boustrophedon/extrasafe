@@ -1,7 +1,7 @@
 #![allow(clippy::unused_io_amount)]
 
 // Tarpaulin can't track coverage on the subprocesses spawned.
-#![cfg(not(tarpaulin_include))]
+// #![cfg(not(tarpaulin_include))]
 
 //! A fully functioning example of a web server, an on-disk database, and an http client, with
 //! subprocesses communicating via a unix socket.
@@ -39,9 +39,11 @@ type DbConn = Arc<Mutex<UnixStream>>;
 fn run_subprocess(cmd: &[&str]) -> std::process::Child {
     let exe_path = std::env::current_exe().unwrap();
 
+    let args: Vec<_> = ["run_main", "--", "--sub"].iter().chain(cmd.iter()).collect();
+
     std::process::Command::new(exe_path.to_str().unwrap())
-        .arg0(cmd[0])
-        .args(cmd)
+        .arg0(format!("{}-subprocess", cmd[0]))
+        .args(&args)
         .spawn()
         .map_err(|e| format!("subcommand `{}` failed to start: {:?}", cmd.join(" "), e))
         .unwrap()
@@ -318,14 +320,21 @@ fn run_client_read() {
 
 fn main() {
     let args: Vec<String> = std::env::args().into_iter().collect();
-    // If args is "example_prog subcommand", run the subcommand
-    if args.len() > 1 {
-        match args[1].as_str() {
-            "db" => run_db(&args[2]),
-            "webserver" => run_webserver(&args[2]),
-            "read_client" => run_client_read(),
-            "write_client" => run_client_write(&args[2]),
-            other => panic!("unknown subcommand {}", other),
+    println!("main args: {:?}", args);
+
+    if args.contains(&"--sub".into()) {
+        // If args is "example_prog [possible other options] --sub subcommand subargs...", run the subcommand
+        if let Some(idx) = args.iter().position(|s| s == "db") {
+            run_db(&args[idx+1]);
+        }
+        else if let Some(idx) = args.iter().position(|s| s == "webserver") {
+            run_webserver(&args[idx+1]);
+        }
+        else if args.contains(&"read_client".into()) {
+            run_client_read();
+        }
+        else if let Some(idx) = args.iter().position(|s| s == "write_client") {
+            run_client_write(&args[idx+1]);
         }
         return;
     }

@@ -7,6 +7,8 @@ use extrasafe::{
 
 use std::io::{Read, Write};
 
+use std::sync::mpsc::sync_channel;
+
 use std::thread;
 
 #[test]
@@ -14,8 +16,15 @@ use std::thread;
 /// main thread, enable seccomp, send the message and get a response. Then try to bind a new socket
 /// and check that it fails.
 fn test_udp() {
-    let server_handle = thread::spawn(|| {
+
+    // These block on send until reciever has finished recv.
+    let (sender1, recv1) = sync_channel::<()>(0);
+
+    let server_handle = thread::spawn(move || {
         let server_socket = std::net::UdpSocket::bind("127.0.0.1:30357").unwrap();
+
+        // setup done
+        sender1.send(()).unwrap();
 
         let mut buf = [1; 14];
         let (count, origin) = server_socket.recv_from(&mut buf).unwrap();
@@ -31,19 +40,21 @@ fn test_udp() {
         );
     });
 
-    // give time for server to start listening
-    // TODO: use mpsc to signal ready rather than sleeping
-    thread::sleep(std::time::Duration::from_millis(100));
+    let _setup_done = recv1.recv().unwrap();
 
     let client_socket = std::net::UdpSocket::bind("127.0.0.1:30493").unwrap();
     client_socket.connect("127.0.0.1:30357").unwrap();
 
     // create safetycontext after server and client have been bound.
     SafetyContext::new()
-        .enable(Networking::nothing().allow_running_udp_sockets())
-        .unwrap()
-        .enable(Threads::nothing().allow_create())
-        .unwrap()
+        .enable(
+            Networking::nothing()
+                .allow_running_udp_sockets()
+        ).unwrap()
+        .enable(
+            Threads::nothing()
+                .allow_create()
+        ).unwrap()
         .apply_to_current_thread()
         .unwrap();
 
@@ -74,8 +85,14 @@ fn test_udp() {
 ///
 /// You can see an example using an actual http server in `examples/network_server.rs`
 fn test_tcp() {
-    let server_handle = thread::spawn(|| {
+    // These block on send until reciever has finished recv.
+    let (sender1, recv1) = sync_channel::<()>(0);
+
+    let server_handle = thread::spawn(move || {
         let server_socket = std::net::TcpListener::bind("127.0.0.1:31357").unwrap();
+
+        // setup done
+        sender1.send(()).unwrap();
 
         let mut buf = [3; 14];
         let (mut incoming, _remote_addr) = server_socket.accept().unwrap();
@@ -92,9 +109,7 @@ fn test_tcp() {
         );
     });
 
-    // give time for server to start listening
-    // TODO: use mpsc to signal ready rather than sleeping
-    thread::sleep(std::time::Duration::from_millis(100));
+    let _setup_done = recv1.recv().unwrap();
 
     let mut client_socket = std::net::TcpStream::connect("127.0.0.1:31357").unwrap();
 
