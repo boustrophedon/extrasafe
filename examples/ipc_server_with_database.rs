@@ -1,8 +1,5 @@
 #![allow(clippy::unused_io_amount)]
 
-// Tarpaulin can't track coverage on the subprocesses spawned.
-// #![cfg(not(tarpaulin_include))]
-
 //! A fully functioning example of a web server, an on-disk database, and an http client, with
 //! subprocesses communicating via a unix socket.
 //!
