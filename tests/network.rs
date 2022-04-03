@@ -146,3 +146,91 @@ fn test_tcp() {
     let res = std::net::TcpListener::bind("127.0.0.1:31359");
     assert!(res.is_err(), "Incorrectly succeeded in binding to socket");
 }
+
+#[test]
+/// Demonstrating opening new TCP sockets and binding them. Ideally you do not need do this and can
+/// instead open and bind before applying your policy.
+fn test_start_tcp() {
+    SafetyContext::new()
+        .enable(
+            Networking::nothing()
+                .allow_start_tcp_servers().yes_really()
+        ).unwrap()
+        .enable(
+            Threads::nothing()
+                .allow_create()
+        ).unwrap()
+        .apply_to_current_thread()
+        .unwrap();
+    let tcp_res = std::net::TcpListener::bind("127.0.0.1:0");
+    assert!(tcp_res.is_ok(), "Failed to bind tcp server");
+
+    let udp_res = std::net::UdpSocket::bind("127.0.0.1:0");
+    assert!(udp_res.is_err(), "Incorrectly succeeded in binding udp socket");
+
+    // test ipv6 as well
+    let tcp_res = std::net::TcpListener::bind("[::1]:0");
+    assert!(tcp_res.is_ok(), "Failed to bind tcp server");
+
+    let udp_res = std::net::UdpSocket::bind("[::1]:0");
+    assert!(udp_res.is_err(), "Incorrectly succeeded in binding udp socket");
+}
+
+#[test]
+/// Demonstrating opening new UDP sockets and binding them. Ideally you do not need do this and can
+/// instead open and bind before applying your policy.
+fn test_start_udp() {
+    SafetyContext::new()
+        .enable(
+            Networking::nothing()
+                .allow_start_udp_servers().yes_really()
+        ).unwrap()
+        .enable(
+            Threads::nothing()
+                .allow_create()
+        ).unwrap()
+        .apply_to_current_thread()
+        .unwrap();
+    let udp_res = std::net::UdpSocket::bind("127.0.0.1:0");
+    assert!(udp_res.is_ok(), "Failed to bind udp server");
+
+    let udp_res = std::net::TcpListener::bind("127.0.0.1:0");
+    assert!(udp_res.is_err(), "Incorrectly succeeded in binding udp socket");
+
+    // test ipv6 as well
+    let udp_res = std::net::UdpSocket::bind("[::1]:0");
+    assert!(udp_res.is_ok(), "Failed to bind udp server");
+
+    let tcp_res = std::net::TcpListener::bind("[::1]:0");
+    assert!(tcp_res.is_err(), "Incorrectly succeeded in binding tcp socket");
+}
+
+#[test]
+/// Demonstrating opening new Unix domain sockets and binding them. Ideally you do not need do this
+/// and can instead open and bind before applying your policy.
+fn test_start_unix() {
+    let dir = tempfile::TempDir::new().unwrap();
+    let mut path = dir.path().to_path_buf();
+    path.push("test.sock");
+
+    SafetyContext::new()
+        .enable(
+            Networking::nothing()
+                .allow_start_unix_servers().yes_really()
+        ).unwrap()
+        .enable(
+            Threads::nothing()
+                .allow_create()
+        ).unwrap()
+        .apply_to_current_thread()
+        .unwrap();
+
+    let unix_res = std::os::unix::net::UnixListener::bind(&path);
+    assert!(unix_res.is_ok(), "Failed to bind tcp server");
+
+    let udp_res = std::net::UdpSocket::bind("127.0.0.1:0");
+    assert!(udp_res.is_err(), "Incorrectly succeeded in binding udp socket");
+
+    let tcp_res = std::net::TcpListener::bind("[::1]:0");
+    assert!(tcp_res.is_err(), "Incorrectly succeeded in binding tcp socket");
+}

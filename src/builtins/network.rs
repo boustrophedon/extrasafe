@@ -2,6 +2,7 @@
 
 use std::collections::{HashMap, HashSet};
 
+use libseccomp::scmp_cmp;
 use syscalls::Sysno;
 
 use super::YesReally;
@@ -38,10 +39,8 @@ const NET_READ_SYSCALLS: &[Sysno] = &[Sysno::listen,
 const NET_WRITE_SYSCALLS: &[Sysno] = &[Sysno::sendto, Sysno::sendmsg, Sysno::sendmmsg,
                                        Sysno::sendfile,
                                        Sysno::write, Sysno::writev, Sysno::pwritev, Sysno::pwritev2];
-const NET_CREATE_SERVER_SYSCALLS: &[Sysno] = &[Sysno::socket, Sysno::bind];
-const NET_CREATE_CLIENT_SYSCALLS: &[Sysno] = &[Sysno::socket, Sysno::connect];
 
-// TODO: refactor
+// TODO: refactor Socket rule creation to reduce duplication in the allow_start_*_server functions
 
 /// A [`RuleSet`] representing syscalls that perform network operations - accept/listen/bind/connect etc.
 ///
@@ -81,8 +80,8 @@ impl Networking {
         }
     }
 
-    /// Allow a running TCP server to continue running. Does not allow `socket` or `bind` to
-    /// prevent new sockets from being created.
+    /// Allow a running TCP server to continue running. Does not allow `socket` or `bind`,
+    /// preventing new sockets from being created.
     #[must_use]
     pub fn allow_running_tcp_servers(mut self) -> Networking {
         self.allowed.extend(NET_IO_SYSCALLS);
@@ -101,7 +100,28 @@ impl Networking {
     /// `examples/network_server.rs` for an example with warp.
     #[must_use]
     pub fn allow_start_tcp_servers(mut self) -> YesReally<Networking> {
-        self.allowed.extend(NET_CREATE_SERVER_SYSCALLS);
+        const AF_INET: u64 = libc::AF_INET as u64;
+        const AF_INET6: u64 = libc::AF_INET6 as u64;
+        const SOCK_STREAM: u64 = libc::SOCK_STREAM as u64;
+
+        // IPv4
+        let rule = Rule::new(Sysno::socket)
+            .and_condition(scmp_cmp!($arg0 & AF_INET == AF_INET))
+            .and_condition(scmp_cmp!($arg1 & SOCK_STREAM == SOCK_STREAM));
+        self.custom.entry(Sysno::socket)
+            .or_insert_with(Vec::new)
+            .push(rule);
+        // IPv6
+        let rule = Rule::new(Sysno::socket)
+            .and_condition(scmp_cmp!($arg0 & AF_INET6 == AF_INET6))
+            .and_condition(scmp_cmp!($arg1 & SOCK_STREAM == SOCK_STREAM));
+        self.custom.entry(Sysno::socket)
+            .or_insert_with(Vec::new)
+            .push(rule);
+
+        // Bind is unconditional here because besides the socket fd, the other argument is a
+        // struct we can't look into due to seccomp restrictions.
+        self.allowed.extend(&[Sysno::bind]);
         self.allowed.extend(NET_IO_SYSCALLS);
         self.allowed.extend(NET_READ_SYSCALLS);
         self.allowed.extend(NET_WRITE_SYSCALLS);
@@ -109,8 +129,8 @@ impl Networking {
         YesReally::new(self)
     }
 
-    /// Allow a running UDP socket to continue running. Does not allow `socket` or `bind` to
-    /// prevent new sockets from being created.
+    /// Allow a running UDP socket to continue running. Does not allow `socket` or `bind`,
+    /// preventing new sockets from being created.
     #[must_use]
     pub fn allow_running_udp_sockets(mut self) -> Networking {
         self.allowed.extend(NET_IO_SYSCALLS);
@@ -128,7 +148,27 @@ impl Networking {
     /// use [`allow_running_udp_sockets`](Self::allow_running_udp_sockets).
     #[must_use]
     pub fn allow_start_udp_servers(mut self) -> YesReally<Networking> {
-        self.allowed.extend(NET_CREATE_SERVER_SYSCALLS);
+        const AF_INET: u64 = libc::AF_INET as u64;
+        const AF_INET6: u64 = libc::AF_INET6 as u64;
+        const SOCK_DGRAM: u64 = libc::SOCK_DGRAM as u64;
+
+        // IPv4
+        let rule = Rule::new(Sysno::socket)
+            .and_condition(scmp_cmp!($arg0 & AF_INET == AF_INET))
+            .and_condition(scmp_cmp!($arg1 & SOCK_DGRAM == SOCK_DGRAM));
+        self.custom.entry(Sysno::socket)
+            .or_insert_with(Vec::new)
+            .push(rule);
+        // IPv6
+        let rule = Rule::new(Sysno::socket)
+            .and_condition(scmp_cmp!($arg0 & AF_INET6 == AF_INET6))
+            .and_condition(scmp_cmp!($arg1 & SOCK_DGRAM == SOCK_DGRAM));
+        self.custom.entry(Sysno::socket)
+            .or_insert_with(Vec::new)
+            .push(rule);
+
+        self.allowed.extend(&[Sysno::bind]);
+        self.allowed.extend(NET_IO_SYSCALLS);
         self.allowed.extend(NET_READ_SYSCALLS);
         self.allowed.extend(NET_WRITE_SYSCALLS);
 
@@ -143,7 +183,26 @@ impl Networking {
     /// reqwest, so we allow socket but not bind here.
     #[must_use]
     pub fn allow_start_tcp_clients(mut self) -> Networking {
-        self.allowed.extend(NET_CREATE_CLIENT_SYSCALLS);
+        const AF_INET: u64 = libc::AF_INET as u64;
+        const AF_INET6: u64 = libc::AF_INET6 as u64;
+        const SOCK_STREAM: u64 = libc::SOCK_STREAM as u64;
+
+        // IPv4
+        let rule = Rule::new(Sysno::socket)
+            .and_condition(scmp_cmp!($arg0 & AF_INET == AF_INET))
+            .and_condition(scmp_cmp!($arg1 & SOCK_STREAM == SOCK_STREAM));
+        self.custom.entry(Sysno::socket)
+            .or_insert_with(Vec::new)
+            .push(rule);
+        // IPv6
+        let rule = Rule::new(Sysno::socket)
+            .and_condition(scmp_cmp!($arg0 & AF_INET6 == AF_INET6))
+            .and_condition(scmp_cmp!($arg1 & SOCK_STREAM == SOCK_STREAM));
+        self.custom.entry(Sysno::socket)
+            .or_insert_with(Vec::new)
+            .push(rule);
+
+        self.allowed.extend(&[Sysno::connect]);
         self.allowed.extend(NET_IO_SYSCALLS);
         self.allowed.extend(NET_READ_SYSCALLS);
         self.allowed.extend(NET_WRITE_SYSCALLS);
@@ -151,8 +210,8 @@ impl Networking {
         self
     }
 
-    /// Allow a running TCP client to continue running. Does not allow `socket` or `connect` to
-    /// prevent new sockets from being created.
+    /// Allow a running TCP client to continue running. Does not allow `socket` or `connect`,
+    /// preventing new sockets from being created.
     ///
     /// This is technically the same as
     /// [`allow_running_tcp_servers`](Self::allow_running_tcp_servers).
@@ -172,8 +231,27 @@ impl Networking {
     /// You probably don't need to use this. In most cases you can just run your server and then
     /// use [`allow_running_unix_servers`](Self::allow_running_unix_servers).
     #[must_use]
-    pub fn allow_start_unix_server(mut self) -> YesReally<Networking> {
-        self.allowed.extend(NET_CREATE_SERVER_SYSCALLS);
+    pub fn allow_start_unix_servers(mut self) -> YesReally<Networking> {
+        const AF_UNIX: u64 = libc::AF_UNIX as u64;
+        const SOCK_STREAM: u64 = libc::SOCK_STREAM as u64;
+        const SOCK_DGRAM: u64 = libc::SOCK_DGRAM as u64;
+
+        // We allow both stream and dgram unix sockets
+        let rule = Rule::new(Sysno::socket)
+            .and_condition(scmp_cmp!($arg0 & AF_UNIX == AF_UNIX))
+            .and_condition(scmp_cmp!($arg1 & SOCK_STREAM == SOCK_STREAM));
+        self.custom.entry(Sysno::socket)
+            .or_insert_with(Vec::new)
+            .push(rule);
+        // DGRAM
+        let rule = Rule::new(Sysno::socket)
+            .and_condition(scmp_cmp!($arg0 & AF_UNIX == AF_UNIX))
+            .and_condition(scmp_cmp!($arg1 & SOCK_DGRAM == SOCK_DGRAM));
+        self.custom.entry(Sysno::socket)
+            .or_insert_with(Vec::new)
+            .push(rule);
+
+        self.allowed.extend(&[Sysno::bind]);
         self.allowed.extend(NET_IO_SYSCALLS);
         self.allowed.extend(NET_READ_SYSCALLS);
         self.allowed.extend(NET_WRITE_SYSCALLS);
@@ -181,8 +259,8 @@ impl Networking {
         YesReally::new(self)
     }
 
-    /// Allow a running Unix server to continue running. Does not allow `socket` or `bind` to
-    /// prevent new sockets from being created.
+    /// Allow a running Unix server to continue running. Does not allow `socket` or `bind`,
+    /// preventing new sockets from being created.
     #[must_use]
     pub fn allow_running_unix_servers(mut self) -> Networking {
         self.allowed.extend(NET_IO_SYSCALLS);
@@ -192,8 +270,8 @@ impl Networking {
         self
     }
 
-    /// Allow a running Unix socket client to continue running. Does not allow `socket` or `connect` to
-    /// prevent new sockets from being created.
+    /// Allow a running Unix socket client to continue running. Does not allow `socket` or `connect`,
+    /// preventing new sockets from being created.
     ///
     /// This is technically the same as
     /// [`allow_running_unix_servers`](Self::allow_running_unix_servers).

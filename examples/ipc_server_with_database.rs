@@ -271,6 +271,8 @@ fn run_client_read() {
     // enable extrasafe context
     SafetyContext::new()
         .enable(Networking::nothing()
+            // Necessary for DNS
+            .allow_start_udp_servers().yes_really()
             .allow_start_tcp_clients()).unwrap()
         // For some reason only if we make two requests with a client does it use multiple threads,
         // so we only need them in the reader thread rather than the writer.
