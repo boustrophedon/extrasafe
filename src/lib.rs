@@ -13,11 +13,11 @@
 //! more information on how to use it.
 
 use libseccomp::*;
-use thiserror::Error;
 
 pub mod builtins;
 
 use std::collections::HashMap;
+use std::fmt;
 
 #[derive(Debug, Clone)]
 /// A seccomp rule.
@@ -220,17 +220,44 @@ impl SafetyContext {
     }
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug)]
 /// The error type produced by [`SafetyContext`]
 pub enum ExtraSafeError {
-    #[error("extrasafe is only usable on Linux.")]
     /// Error created when trying to apply filters on non-Linux operating systems. Should never
     /// occur.
     UnsupportedOSError,
-    #[error("A conditional rule on syscall `{0}` from RuleSet `{1}` would be overridden by a simple rule from RuleSet `{2}`.")]
     /// Error created when a simple rule would override a conditional rule.
     ConditionalNoEffectError(syscalls::Sysno, &'static str, &'static str),
-    #[error("A libseccomp error occured. {0:?}")]
     /// An error from the underlying seccomp library.
-    SeccompError(#[from] libseccomp::error::SeccompError),
+    SeccompError(libseccomp::error::SeccompError),
+}
+
+impl fmt::Display for ExtraSafeError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::UnsupportedOSError => f.write_str("extrasafe is only usable on Linux."),
+            &Self::ConditionalNoEffectError(sysno, a, b) => write!(
+                f,
+                "A conditional rule on syscall `{}` from RuleSet `{}` would be overridden \
+                by a simple rule from RuleSet `{}`.",
+                sysno, a, b,
+            ),
+            Self::SeccompError(err) => write!(f, "A libseccomp error occured {:?}", err),
+        }
+    }
+}
+
+impl From<libseccomp::error::SeccompError> for ExtraSafeError {
+    fn from(value: libseccomp::error::SeccompError) -> Self {
+        Self::SeccompError(value)
+    }
+}
+
+impl std::error::Error for ExtraSafeError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::UnsupportedOSError | Self::ConditionalNoEffectError(..) => None,
+            Self::SeccompError(err) => Some(err),
+        }
+    }
 }
