@@ -12,7 +12,7 @@ categories = ["os::linux-apis"]
 [dependencies]
 libseccomp = "^0.3"
 libc = "^0.2"
-syscalls = "^0.5"
+syscalls = "^0.6"
 
 [dev-dependencies]
 bytes = "^1"
