@@ -67,6 +67,23 @@ pub trait RuleSet {
     fn name(&self) -> &'static str;
 }
 
+impl<T: ?Sized + RuleSet> RuleSet for &T {
+    #[inline]
+    fn simple_rules(&self) -> Vec<syscalls::Sysno> {
+        T::simple_rules(self)
+    }
+
+    #[inline]
+    fn conditional_rules(&self) -> HashMap<syscalls::Sysno, Vec<Rule>> {
+        T::conditional_rules(self)
+    }
+
+    #[inline]
+    fn name(&self) -> &'static str {
+        T::name(self)
+    }
+}
+
 #[must_use]
 #[derive(Debug)]
 /// A struct representing a set of rules to be loaded into a seccomp filter and applied to the
