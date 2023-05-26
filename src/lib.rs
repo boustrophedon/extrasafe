@@ -219,7 +219,9 @@ impl SafetyContext {
             ctx.set_filter_attr(ScmpFilterAttr::CtlTsync, 0)?;
         }
 
-        ctx.add_arch(ScmpArch::Native)?;
+        // We don't have to care if the architecture was already added.
+        // And since this is a new `ScmpFilterContext()`, it should not even be possible.
+        let _: bool = ctx.add_arch(ScmpArch::Native)?;
 
         self = self.enable(builtins::BasicCapabilities)?;
         for LabeledRule(_origin, rule) in self.rules.into_values().flatten() {
