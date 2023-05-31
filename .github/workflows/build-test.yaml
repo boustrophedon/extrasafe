@@ -6,6 +6,7 @@ name: build-test
 on: 
   push:
   workflow_dispatch:
+  pull_request:
 jobs:
   validate:
     name: Format and Lint Check
