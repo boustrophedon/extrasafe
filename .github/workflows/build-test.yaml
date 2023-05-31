@@ -1,7 +1,11 @@
 # Inspired heavily by the libseccomp-rs CI script
 
+
+
 name: build-test
-on: push
+on: 
+  push:
+  workflow_dispatch:
 jobs:
   validate:
     name: Format and Lint Check
