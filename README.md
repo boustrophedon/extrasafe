@@ -52,7 +52,7 @@ If you're developing a library, there are three things you can do:
 
 You don't want to use extrasafe directly in your library because you don't know what other functionality your dependents will be using.
 
-**Currently extrasafe only supports `x86_64`. If you'd like to help support other archs please open an issue.**
+**Currently extrasafe only supports `x86_64` and `aarch64`. If you'd like to help support other archs please open an issue.**
 
 ## Other uses
 

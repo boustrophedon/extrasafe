@@ -12,15 +12,27 @@ use crate::{Rule, RuleSet};
 
 // TODO: add io_uring
 const NET_IO_SYSCALLS: &[Sysno] = &[
-    Sysno::epoll_create, Sysno::epoll_create1,
-    Sysno::epoll_ctl, Sysno::epoll_wait, Sysno::epoll_pwait, Sysno::epoll_pwait2,
-    Sysno::select, Sysno::pselect6,
-    Sysno::poll, Sysno::ppoll,
+    #[cfg(target_arch = "x86_64")]
+    Sysno::epoll_create,
+    Sysno::epoll_create1,
+    Sysno::epoll_ctl,
+    #[cfg(target_arch = "x86_64")]
+    Sysno::epoll_wait,
+    Sysno::epoll_pwait,
+    Sysno::epoll_pwait2,
+    #[cfg(target_arch = "x86_64")]
+    Sysno::select,
+    Sysno::pselect6,
+    #[cfg(target_arch = "x86_64")]
+    Sysno::poll,
+    Sysno::ppoll,
 
     Sysno::accept, Sysno::accept4,
 
     // used in reqwest::blocking I guess to notify when blocking reads finish?
-    Sysno::eventfd, Sysno::eventfd2,
+    #[cfg(target_arch = "x86_64")]
+    Sysno::eventfd,
+    Sysno::eventfd2,
 
     // Used to set tcp_nodelay
     Sysno::fcntl, Sysno::ioctl,

@@ -93,10 +93,16 @@ pub struct ForkAndExec;
 impl RuleSet for ForkAndExec {
     fn simple_rules(&self) -> Vec<Sysno> {
         vec![
-             Sysno::fork, Sysno::vfork,
-             Sysno::execve, Sysno::execveat,
-             Sysno::wait4, Sysno::waitid,
-             Sysno::clone, Sysno::clone3,
+            #[cfg(target_arch = "x86_64")]
+             Sysno::fork,
+             #[cfg(target_arch = "x86_64")]
+             Sysno::vfork,
+             Sysno::execve,
+             Sysno::execveat,
+             Sysno::wait4,
+             Sysno::waitid,
+             Sysno::clone,
+             Sysno::clone3,
         ]
     }
 

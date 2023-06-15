@@ -13,13 +13,30 @@ use super::YesReally;
 const IO_READ_SYSCALLS: &[Sysno] = &[Sysno::read, Sysno::readv, Sysno::preadv, Sysno::preadv2, Sysno::pread64, Sysno::lseek];
 const IO_WRITE_SYSCALLS: &[Sysno] = &[Sysno::write, Sysno::writev, Sysno::pwritev, Sysno::pwritev2, Sysno::pwrite64,
                                       Sysno::fsync, Sysno::fdatasync, Sysno::lseek];
-const IO_OPEN_SYSCALLS: &[Sysno] = &[Sysno::open, Sysno::openat, Sysno::openat2];
+const IO_OPEN_SYSCALLS: &[Sysno] = &[
+    #[cfg(target_arch = "x86_64")]
+    Sysno::open,
+    Sysno::openat,
+    Sysno::openat2,
+];
 const IO_IOCTL_SYSCALLS: &[Sysno] = &[Sysno::ioctl, Sysno::fcntl];
 // TODO: may want to separate fd-based and filename-based?
-const IO_METADATA_SYSCALLS: &[Sysno] = &[Sysno::stat, Sysno::fstat, Sysno::newfstatat,
-                                         Sysno::lstat, Sysno::statx,
-                                         Sysno::getdents, Sysno::getdents64,
-                                         Sysno::getcwd];
+const IO_METADATA_SYSCALLS: &[Sysno] = &[
+    #[cfg(target_arch = "x86_64")]
+    Sysno::stat,
+    Sysno::fstat,
+    #[cfg(target_arch = "aarch64")]
+    Sysno::fstatat,
+    #[cfg(target_arch = "x86_64")]
+    Sysno::newfstatat,
+    #[cfg(target_arch = "x86_64")]
+    Sysno::lstat,
+    Sysno::statx,
+    #[cfg(target_arch = "x86_64")]
+    Sysno::getdents,
+    Sysno::getdents64,
+    Sysno::getcwd,
+];
 const IO_CLOSE_SYSCALLS: &[Sysno] = &[Sysno::close, Sysno::close_range];
 
 /// A [`RuleSet`] representing syscalls that perform IO - open/close/read/write/seek/stat.
@@ -106,11 +123,14 @@ impl SystemIO {
         const WRITECREATE: u64 = O_WRONLY | O_RDWR | O_APPEND | O_CREAT | O_EXCL;// | O_TMPFILE;
 
         // flags are the second argument for open but the third for openat
-        let rule = Rule::new(Sysno::open)
-            .and_condition(scmp_cmp!($arg1 & WRITECREATE == 0));
-        self.custom.entry(Sysno::open)
-            .or_insert_with(Vec::new)
-            .push(rule);
+        #[cfg(target_arch = "x86_64")]
+        {
+            let rule = Rule::new(Sysno::open)
+                .and_condition(scmp_cmp!($arg1 & WRITECREATE == 0));
+            self.custom.entry(Sysno::open)
+                .or_insert_with(Vec::new)
+                .push(rule);
+        }
 
         let rule = Rule::new(Sysno::openat)
             .and_condition(scmp_cmp!($arg2 & WRITECREATE == 0));
