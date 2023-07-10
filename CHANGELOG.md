@@ -1,3 +1,7 @@
+unreleased
+----------
+- reexport syscalls dependency
+
 0.1.4
 -----
 - impl RuleSet for &RuleSet
