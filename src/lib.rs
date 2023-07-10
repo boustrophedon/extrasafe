@@ -14,6 +14,8 @@
 
 use libseccomp::*;
 
+pub use syscalls;
+
 pub mod builtins;
 
 use std::collections::HashMap;
