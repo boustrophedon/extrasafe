@@ -23,8 +23,8 @@ fn simple_example() {
 
 fn custom_ruleset() {
     use extrasafe::{Rule, RuleSet};
+    use extrasafe::syscalls::Sysno;
     use libseccomp::scmp_cmp;
-    use syscalls::Sysno;
 
     use std::collections::HashMap;
 

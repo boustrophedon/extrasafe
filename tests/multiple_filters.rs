@@ -1,13 +1,14 @@
 use extrasafe::*;
+use extrasafe::syscalls::Sysno;
 
 use std::collections::HashMap;
 
 struct Seccomp;
 impl RuleSet for Seccomp {
-    fn simple_rules(&self) -> Vec<syscalls::Sysno> {
-        vec![syscalls::Sysno::prctl, syscalls::Sysno::seccomp]
+    fn simple_rules(&self) -> Vec<Sysno> {
+        vec![Sysno::prctl, Sysno::seccomp]
     }
-    fn conditional_rules(&self) -> HashMap<syscalls::Sysno, Vec<Rule>> {
+    fn conditional_rules(&self) -> HashMap<Sysno, Vec<Rule>> {
         HashMap::new()
     }
     fn name(&self) -> &'static str {

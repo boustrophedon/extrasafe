@@ -1,6 +1,6 @@
 use extrasafe::builtins::SystemIO;
+use extrasafe::syscalls::Sysno;
 use extrasafe::*;
-use syscalls::Sysno;
 
 use std::collections::HashMap;
 
