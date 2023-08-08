@@ -9,12 +9,12 @@ The basic parts are:
 This is the entry point. You create a SafetyContext, in which you gather rules via RuleSets, which are then used to generate seccomp rules. The seccomp filter is instantiated when `apply*()` is called, and cannot be removed once loaded. If the SafetyContext is applied with `apply_to_all_threads` instead of `apply_to_current_thread()`, the `SECCOMP_FILTER_FLAG_TSYNC` attr is set, which synchronizes all threads in the process to have the same seccomp filters.
 - RuleSet
 A trait that provides a collection of simple and conditional rules. You can think of this as a facet of a security policy, like allowing IO, network, or clock access. There are implementors provided by extrasafe and you can also define your own.
-- Rule
+- SeccompRule
 A syscall and an optional number of conditions on the syscall's arguments. You can make comparisons on the arguments of the syscall, but the conditions can't dereference pointers so you can't do e.g. string comparisons on file paths.
 
 The comparisons are such that when the comparison returns **true**, the syscall is allowed.
 
-A single Rule may contain multiple conditions, which are anded together by libseccomp, that is, they all must be true for the syscall to be allowed. If multiple rules are loaded, the syscall is allowed if any of the rules allow it.
+A single SeccompRule may contain multiple conditions, which are anded together by libseccomp, that is, they all must be true for the syscall to be allowed. If multiple rules are loaded, the syscall is allowed if any of the rules allow it.
 
 
 One thing to note is that libseccomp will silently override conditional rules on a syscall if an unconditional one is added (in the context of extrasafe, where all filters are allow-based). extrasafe catches this and provides an error with the conflicting syscall and the names of the RuleSets that provided the rules.

@@ -5,7 +5,7 @@ use std::collections::{HashMap, HashSet};
 //use libseccomp::scmp_cmp;
 use syscalls::Sysno;
 
-use crate::{Rule, RuleSet};
+use crate::{SeccompRule, RuleSet};
 
 use super::YesReally;
 
@@ -60,16 +60,16 @@ impl RuleSet for Threads {
         self.allowed.iter().copied().collect()
     }
 
-    fn conditional_rules(&self) -> HashMap<Sysno, Vec<Rule>> {
+    fn conditional_rules(&self) -> HashMap<Sysno, Vec<SeccompRule>> {
         // let mut rules = HashMap::new();
 
-        // let clone = Rule::new(Sysno::clone)
+        // let clone = SeccompRule::new(Sysno::clone)
         //     .and_condition(scmp_cmp!($arg2 & CLONE_THREAD == CLONE_THREAD));
         // rules.entry(Sysno::clone)
         //     .or_insert_with(Vec::new)
         //     .push(clone);
 
-        // let clone3 = Rule::new(Sysno::clone3)
+        // let clone3 = SeccompRule::new(Sysno::clone3)
         //     .and_condition(scmp_cmp!($arg2 & CLONE_THREAD == CLONE_THREAD));
         // rules.entry(Sysno::clone3)
         //     .or_insert_with(Vec::new)
@@ -100,18 +100,18 @@ impl RuleSet for ForkAndExec {
         ]
     }
 
-    fn conditional_rules(&self) -> HashMap<Sysno, Vec<Rule>> {
+    fn conditional_rules(&self) -> HashMap<Sysno, Vec<SeccompRule>> {
         // TODO: figure out if there's something reasonable we can do with this. same as with
         // Threads
         // let mut custom = HashMap::new();
         //
-        // let clone = Rule::new(Sysno::clone)
+        // let clone = SeccompRule::new(Sysno::clone)
         //     .and_condition(scmp_cmp!($arg2 & CLONE_PARENT == CLONE_PARENT));
         // custom.entry(Sysno::clone)
         //     .or_insert_with(Vec::new)
         //     .push(clone);
 
-        // let clone3 = Rule::new(Sysno::clone3)
+        // let clone3 = SeccompRule::new(Sysno::clone3)
         //     .and_condition(scmp_cmp!($arg2 & CLONE_PARENT == CLONE_PARENT));
         // custom.entry(Sysno::clone3)
         //     .or_insert_with(Vec::new)

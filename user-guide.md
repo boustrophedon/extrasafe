@@ -48,14 +48,15 @@ See the [examples directory](https://github.com/boustrophedon/extrasafe/tree/mas
 The `RuleSet` trait is defined as follows:
 
 ```rust
-/// A [`RuleSet`] is a collection of seccomp Rules that enable a functionality.
+/// A [`RuleSet`] is a collection of [`SeccompRule`] s that enable a
+/// functionality, such as opening files or starting threads.
 pub trait RuleSet {
     /// A simple rule is one that just allows the syscall without restriction.
     fn simple_rules(&self) -> Vec<syscalls::Sysno>;
 
     /// A conditional rule is a rule that uses a condition to restrict the syscall, e.g. only
     /// specific flags as parameters.
-    fn conditional_rules(&self) -> HashMap<syscalls::Sysno, Vec<Rule>>;
+    fn conditional_rules(&self) -> HashMap<syscalls::Sysno, Vec<SeccompRule>>;
 
     /// The name of the profile.
     fn name(&self) -> &'static str;
@@ -89,7 +90,7 @@ If you want to use syscalls that aren't included in any of the builtin rulesets,
 In the meantime, you can create your own:
 
 ```rust
-use extrasafe::{Rule, RuleSet};
+use extrasafe::{SeccompRule, RuleSet};
 use libseccomp::scmp_cmp;
 use syscalls::Sysno;
 
@@ -103,11 +104,11 @@ impl RuleSet for MyRuleSet {
 		vec![Sysno::reboot]
 	}
 
-	fn conditional_rules(&self) -> HashMap<Sysno, Vec<Rule>> {
+	fn conditional_rules(&self) -> HashMap<Sysno, Vec<SeccompRule>> {
 		// Only allow the creation of stream (tcp) sockets
 		const SOCK_STREAM: u64 = libc::SOCK_STREAM as u64;
 
-		let rule = Rule::new(Sysno::socket)
+		let rule = SeccompRule::new(Sysno::socket)
 			.and_condition(
 				scmp_cmp!($arg0 & SOCK_STREAM == SOCK_STREAM));
 		HashMap::from([

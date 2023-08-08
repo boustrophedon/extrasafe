@@ -22,7 +22,7 @@ fn simple_example() {
 }
 
 fn custom_ruleset() {
-    use extrasafe::{Rule, RuleSet};
+    use extrasafe::{SeccompRule, RuleSet};
     use extrasafe::syscalls::Sysno;
     use libseccomp::scmp_cmp;
 
@@ -36,11 +36,11 @@ fn custom_ruleset() {
             vec![Sysno::reboot]
         }
 
-        fn conditional_rules(&self) -> HashMap<Sysno, Vec<Rule>> {
+        fn conditional_rules(&self) -> HashMap<Sysno, Vec<SeccompRule>> {
             // Only allow the creation of stream (tcp) sockets
             const SOCK_STREAM: u64 = libc::SOCK_STREAM as u64;
 
-            let rule = Rule::new(Sysno::socket)
+            let rule = SeccompRule::new(Sysno::socket)
                 .and_condition(
                     scmp_cmp!($arg0 & SOCK_STREAM == SOCK_STREAM));
             HashMap::from([
