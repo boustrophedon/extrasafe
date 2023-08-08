@@ -5,7 +5,7 @@ use std::collections::{HashMap, HashSet};
 
 use syscalls::Sysno;
 
-use crate::{Rule, RuleSet};
+use crate::{SeccompRule, RuleSet};
 
 /// Enable syscalls related to time.
 pub struct Time {
@@ -40,7 +40,7 @@ impl RuleSet for Time {
         self.allowed.iter().copied().collect()
     }
 
-    fn conditional_rules(&self) -> HashMap<Sysno, Vec<Rule>> {
+    fn conditional_rules(&self) -> HashMap<Sysno, Vec<SeccompRule>> {
         HashMap::new()
     }
 

@@ -8,7 +8,7 @@ impl RuleSet for Seccomp {
     fn simple_rules(&self) -> Vec<Sysno> {
         vec![Sysno::prctl, Sysno::seccomp]
     }
-    fn conditional_rules(&self) -> HashMap<Sysno, Vec<Rule>> {
+    fn conditional_rules(&self) -> HashMap<Sysno, Vec<SeccompRule>> {
         HashMap::new()
     }
     fn name(&self) -> &'static str {

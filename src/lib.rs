@@ -23,29 +23,29 @@ use std::fmt;
 
 #[derive(Debug, Clone)]
 /// A seccomp rule.
-pub struct Rule {
+pub struct SeccompRule {
     /// The syscall being filtered
     pub syscall: syscalls::Sysno,
     // Yes, technically this is not the correct usage of "comparators" but it's fine.
-    /// Comparisons applied to the syscall's args. The Rule allows the syscall if all comparators
+    /// Comparisons applied to the syscall's args. The SeccompRule allows the syscall if all comparators
     /// evaluate to true.
     pub comparators: Vec<ScmpArgCompare>,
 }
 
-impl Rule {
-    /// Constructs a new Rule that unconditionally allows the given syscall.
+impl SeccompRule {
+    /// Constructs a new [`SeccompRule`] that unconditionally allows the given syscall.
     #[must_use]
-    pub fn new(syscall: syscalls::Sysno) -> Rule {
-        Rule {
+    pub fn new(syscall: syscalls::Sysno) -> SeccompRule {
+        SeccompRule {
             syscall,
             comparators: Vec::new(),
         }
     }
 
-    /// Adds a condition to the Rule which must evaluate to true in order for the syscall to be
+    /// Adds a condition to the [`SeccompRule`] which must evaluate to true in order for the syscall to be
     /// allowed.
     #[must_use]
-    pub fn and_condition(mut self, comparator: ScmpArgCompare) -> Rule {
+    pub fn and_condition(mut self, comparator: ScmpArgCompare) -> SeccompRule {
         self.comparators.push(comparator);
 
         self
@@ -53,17 +53,18 @@ impl Rule {
 }
 
 #[derive(Debug, Clone)]
-/// A [`Rule`] labeled with the profile it originated from. Internal-only.
-struct LabeledRule(pub &'static str, pub Rule);
+/// A [`SeccompRule`] labeled with the profile it originated from. Internal-only.
+struct LabeledSeccompRule(pub &'static str, pub SeccompRule);
 
-/// A [`RuleSet`] is a collection of seccomp Rules that enable a functionality.
+/// A [`RuleSet`] is a collection of [`SeccompRule`] s that enable a
+/// functionality, such as opening files or starting threads.
 pub trait RuleSet {
     /// A simple rule is one that just allows the syscall without restriction.
     fn simple_rules(&self) -> Vec<syscalls::Sysno>;
 
     /// A conditional rule is a rule that uses a condition to restrict the syscall, e.g. only
     /// specific flags as parameters.
-    fn conditional_rules(&self) -> HashMap<syscalls::Sysno, Vec<Rule>>;
+    fn conditional_rules(&self) -> HashMap<syscalls::Sysno, Vec<SeccompRule>>;
 
     /// The name of the profile.
     fn name(&self) -> &'static str;
@@ -76,7 +77,7 @@ impl<T: ?Sized + RuleSet> RuleSet for &T {
     }
 
     #[inline]
-    fn conditional_rules(&self) -> HashMap<syscalls::Sysno, Vec<Rule>> {
+    fn conditional_rules(&self) -> HashMap<syscalls::Sysno, Vec<SeccompRule>> {
         T::conditional_rules(self)
     }
 
@@ -96,7 +97,7 @@ impl<T: ?Sized + RuleSet> RuleSet for &T {
 /// all threads in the process.
 pub struct SafetyContext {
     /// May either be a single simple rule or multiple conditional rules, but not both.
-    rules: HashMap<syscalls::Sysno, Vec<LabeledRule>>,
+    rules: HashMap<syscalls::Sysno, Vec<LabeledSeccompRule>>,
 }
 
 impl SafetyContext {
@@ -116,12 +117,12 @@ impl SafetyContext {
 
     /// Gather unconditional and conditional rules to be provided to the seccomp context.
     #[allow(clippy::needless_pass_by_value)]
-    fn gather_rules(rules: impl RuleSet) -> Vec<Rule> {
+    fn gather_rules(rules: impl RuleSet) -> Vec<SeccompRule> {
         let base_syscalls = rules.simple_rules();
         let mut rules = rules.conditional_rules();
         for syscall in base_syscalls {
             if !rules.contains_key(&syscall) {
-                let rule = Rule::new(syscall);
+                let rule = SeccompRule::new(syscall);
                 rules.entry(syscall)
                     .or_insert_with(Vec::new)
                     .push(rule);
@@ -144,7 +145,7 @@ impl SafetyContext {
         let policy_name = policy.name();
         let new_rules = SafetyContext::gather_rules(policy)
             .into_iter()
-            .map(|rule| LabeledRule(policy_name, rule));
+            .map(|rule| LabeledSeccompRule(policy_name, rule));
 
         for labeled_new_rule in new_rules {
             let new_rule = &labeled_new_rule.1;
@@ -226,7 +227,7 @@ impl SafetyContext {
         let _: bool = ctx.add_arch(ScmpArch::Native)?;
 
         self = self.enable(builtins::BasicCapabilities)?;
-        for LabeledRule(_origin, rule) in self.rules.into_values().flatten() {
+        for LabeledSeccompRule(_origin, rule) in self.rules.into_values().flatten() {
             if rule.comparators.is_empty() {
                 ctx.add_rule(ScmpAction::Allow, rule.syscall.id())?;
             }

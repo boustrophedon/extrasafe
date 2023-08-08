@@ -1,6 +1,8 @@
 unreleased
 ----------
 - reexport syscalls dependency
+- Rename `Rule` to `SeccompRule` in preparation for `LandlockRule`
+    - Update relevant documentation
 
 0.1.4
 -----

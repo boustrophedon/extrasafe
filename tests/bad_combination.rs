@@ -10,7 +10,7 @@ impl RuleSet for JustWrite {
         vec![Sysno::write]
     }
 
-    fn conditional_rules(&self) -> HashMap<Sysno, Vec<Rule>> {
+    fn conditional_rules(&self) -> HashMap<Sysno, Vec<SeccompRule>> {
         HashMap::new()
     }
 

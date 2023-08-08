@@ -6,7 +6,7 @@ use libseccomp::scmp_cmp;
 use syscalls::Sysno;
 
 use super::YesReally;
-use crate::{Rule, RuleSet};
+use crate::{SeccompRule, RuleSet};
 
 // TODO: make bind calls conditional on the DGRAM/UNIX/STREAM flag in each function
 
@@ -67,7 +67,7 @@ pub struct Networking {
     /// Syscalls that are allowed
     allowed: HashSet<Sysno>,
     /// Syscalls that are allowed with custom rules, e.g. only allow to specific fds
-    custom: HashMap<Sysno, Vec<Rule>>,
+    custom: HashMap<Sysno, Vec<SeccompRule>>,
 }
 
 impl Networking {
@@ -105,14 +105,14 @@ impl Networking {
         const SOCK_STREAM: u64 = libc::SOCK_STREAM as u64;
 
         // IPv4
-        let rule = Rule::new(Sysno::socket)
+        let rule = SeccompRule::new(Sysno::socket)
             .and_condition(scmp_cmp!($arg0 & AF_INET == AF_INET))
             .and_condition(scmp_cmp!($arg1 & SOCK_STREAM == SOCK_STREAM));
         self.custom.entry(Sysno::socket)
             .or_insert_with(Vec::new)
             .push(rule);
         // IPv6
-        let rule = Rule::new(Sysno::socket)
+        let rule = SeccompRule::new(Sysno::socket)
             .and_condition(scmp_cmp!($arg0 & AF_INET6 == AF_INET6))
             .and_condition(scmp_cmp!($arg1 & SOCK_STREAM == SOCK_STREAM));
         self.custom.entry(Sysno::socket)
@@ -153,14 +153,14 @@ impl Networking {
         const SOCK_DGRAM: u64 = libc::SOCK_DGRAM as u64;
 
         // IPv4
-        let rule = Rule::new(Sysno::socket)
+        let rule = SeccompRule::new(Sysno::socket)
             .and_condition(scmp_cmp!($arg0 & AF_INET == AF_INET))
             .and_condition(scmp_cmp!($arg1 & SOCK_DGRAM == SOCK_DGRAM));
         self.custom.entry(Sysno::socket)
             .or_insert_with(Vec::new)
             .push(rule);
         // IPv6
-        let rule = Rule::new(Sysno::socket)
+        let rule = SeccompRule::new(Sysno::socket)
             .and_condition(scmp_cmp!($arg0 & AF_INET6 == AF_INET6))
             .and_condition(scmp_cmp!($arg1 & SOCK_DGRAM == SOCK_DGRAM));
         self.custom.entry(Sysno::socket)
@@ -188,14 +188,14 @@ impl Networking {
         const SOCK_STREAM: u64 = libc::SOCK_STREAM as u64;
 
         // IPv4
-        let rule = Rule::new(Sysno::socket)
+        let rule = SeccompRule::new(Sysno::socket)
             .and_condition(scmp_cmp!($arg0 & AF_INET == AF_INET))
             .and_condition(scmp_cmp!($arg1 & SOCK_STREAM == SOCK_STREAM));
         self.custom.entry(Sysno::socket)
             .or_insert_with(Vec::new)
             .push(rule);
         // IPv6
-        let rule = Rule::new(Sysno::socket)
+        let rule = SeccompRule::new(Sysno::socket)
             .and_condition(scmp_cmp!($arg0 & AF_INET6 == AF_INET6))
             .and_condition(scmp_cmp!($arg1 & SOCK_STREAM == SOCK_STREAM));
         self.custom.entry(Sysno::socket)
@@ -237,14 +237,14 @@ impl Networking {
         const SOCK_DGRAM: u64 = libc::SOCK_DGRAM as u64;
 
         // We allow both stream and dgram unix sockets
-        let rule = Rule::new(Sysno::socket)
+        let rule = SeccompRule::new(Sysno::socket)
             .and_condition(scmp_cmp!($arg0 & AF_UNIX == AF_UNIX))
             .and_condition(scmp_cmp!($arg1 & SOCK_STREAM == SOCK_STREAM));
         self.custom.entry(Sysno::socket)
             .or_insert_with(Vec::new)
             .push(rule);
         // DGRAM
-        let rule = Rule::new(Sysno::socket)
+        let rule = SeccompRule::new(Sysno::socket)
             .and_condition(scmp_cmp!($arg0 & AF_UNIX == AF_UNIX))
             .and_condition(scmp_cmp!($arg1 & SOCK_DGRAM == SOCK_DGRAM));
         self.custom.entry(Sysno::socket)
@@ -290,7 +290,7 @@ impl RuleSet for Networking {
         self.allowed.iter().copied().collect()
     }
 
-    fn conditional_rules(&self) -> HashMap<syscalls::Sysno, Vec<Rule>> {
+    fn conditional_rules(&self) -> HashMap<syscalls::Sysno, Vec<SeccompRule>> {
         self.custom.clone()
     }
 

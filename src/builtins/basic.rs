@@ -5,7 +5,7 @@ use std::collections::HashMap;
 
 use syscalls::Sysno;
 
-use crate::{Rule, RuleSet};
+use crate::{SeccompRule, RuleSet};
 
 /// A [`RuleSet`] allowing basic required syscalls to do things like allocate memory, and also a few that are used by
 /// Rust to set up panic handling and segfault handlers.
@@ -71,7 +71,7 @@ impl RuleSet for BasicCapabilities {
         ]
     }
 
-    fn conditional_rules(&self) -> HashMap<Sysno, Vec<Rule>> {
+    fn conditional_rules(&self) -> HashMap<Sysno, Vec<SeccompRule>> {
         HashMap::new()
     }
 
