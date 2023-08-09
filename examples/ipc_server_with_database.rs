@@ -318,7 +318,7 @@ fn run_client_read() {
 }
 
 fn main() {
-    let args: Vec<String> = std::env::args().into_iter().collect();
+    let args: Vec<String> = std::env::args().collect();
     println!("main args: {:?}", args);
 
     if args.contains(&"--sub".into()) {
