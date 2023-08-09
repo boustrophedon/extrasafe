@@ -13,6 +13,7 @@
 //! See the [`SafetyContext`] struct's documentation and the tests/ and examples/ directories for
 //! more information on how to use it.
 
+
 // Filter is the entire, top-level seccomp filter chain. All SeccompilerRules are or-ed together.
 //  Vec<(i64, Vec<SeccompilerRule>)>, Vec is empty if Rule has no filters.
 // Rule is a syscall + multiple argument filters. All argument filters are and-ed together in a
@@ -29,14 +30,23 @@ use seccompiler::SeccompAction;
 
 pub use syscalls;
 
+pub mod error;
+pub use error::*;
+
 #[macro_use]
 pub mod macros;
 pub use macros::*;
 
 pub mod builtins;
 
+#[cfg(feature = "landlock")]
+mod landlock;
+#[cfg(feature = "landlock")]
+pub use landlock::*;
+
+#[cfg(feature = "landlock")]
+use std::path::PathBuf;
 use std::collections::{BTreeMap, HashMap};
-use std::fmt;
 
 #[derive(Debug, Clone, PartialEq)]
 /// A restriction on the arguments of a syscall. May be combined with other
@@ -163,21 +173,28 @@ impl SeccompRule {
 }
 
 #[derive(Debug, Clone)]
-/// A [`SeccompRule`] labeled with the profile it originated from. Internal-only.
+/// A [`SeccompRule`] labeled with the name of the [`RuleSet`] it originated from. Internal-only.
 struct LabeledSeccompRule(pub &'static str, pub SeccompRule);
 
-/// A [`RuleSet`] is a collection of [`SeccompRule`] s that enable a
+/// A [`RuleSet`] is a collection of [`SeccompRule`] and `LandlockRule` s that enable a
 /// functionality, such as opening files or starting threads.
 pub trait RuleSet {
-    /// A simple rule is one that just allows the syscall without restriction.
+    /// A simple rule is a seccomp rule that just allows the syscall without restriction.
     fn simple_rules(&self) -> Vec<syscalls::Sysno>;
 
-    /// A conditional rule is a rule that uses a condition to restrict the syscall, e.g. only
+    /// A conditional rule is a seccomp rule that uses a condition to restrict the syscall, e.g. only
     /// specific flags as parameters.
     fn conditional_rules(&self) -> HashMap<syscalls::Sysno, Vec<SeccompRule>>;
 
     /// The name of the profile.
     fn name(&self) -> &'static str;
+
+    #[cfg(feature = "landlock")]
+    /// A landlock rule is a pair of an access control (e.g. read/write access, directory creation
+    /// access) and a directory or path.
+    fn landlock_rules(&self) -> Vec<LandlockRule> {
+        Vec::new()
+    }
 }
 
 impl<T: ?Sized + RuleSet> RuleSet for &T {
@@ -195,21 +212,37 @@ impl<T: ?Sized + RuleSet> RuleSet for &T {
     fn name(&self) -> &'static str {
         T::name(self)
     }
+
+    #[cfg(feature = "landlock")]
+    #[inline]
+    fn landlock_rules(&self) -> Vec<LandlockRule> {
+        T::landlock_rules(self)
+    }
 }
 
 #[must_use]
-#[derive(Debug)]
 /// A struct representing a set of rules to be loaded into a seccomp filter and applied to the
 /// current thread, or all threads in the current process.
 ///
 /// Create with [`new()`](Self::new). Add [`RuleSet`]s with [`enable()`](Self::enable), and then use [`apply_to_current_thread()`](Self::apply_to_current_thread)
 /// to apply the filters to the current thread, or [`apply_to_all_threads()`](Self::apply_to_all_threads) to apply the filter to
 /// all threads in the process.
+#[derive(Debug)]
 pub struct SafetyContext {
-    /// May either be a single simple rule or multiple conditional rules, but not both.
-    rules: HashMap<syscalls::Sysno, Vec<LabeledSeccompRule>>,
+    /// A mapping from a syscall to either be a single simple rule or multiple conditional rules, but not both.
+    seccomp_rules: HashMap<syscalls::Sysno, Vec<LabeledSeccompRule>>,
+    #[cfg(feature = "landlock")]
+    /// A mapping from filesystem paths to [`LandlockRule`]s specifying files and directories with
+    /// the operations that can be performed on them.
+    landlock_rules: HashMap<PathBuf, LabeledLandlockRule>,
     /// The errno returned when a syscall does not match one of the seccomp rules. Defaults to 1.
     errno: u32,
+    /// Flag to apply seccomp to all threads rather than just the current thread. Defaults to
+    /// false (but the public apply functions always set it directly anyway)
+    all_threads: bool,
+    #[cfg(feature = "landlock")]
+    /// Flag to only use landlock filters and not enable seccomp filters at all. Defaults to false.
+    only_landlock: bool,
 }
 
 impl SafetyContext {
@@ -218,8 +251,13 @@ impl SafetyContext {
     /// [`apply_to_all_threads`](Self::apply_to_all_threads) is called.
     pub fn new() -> SafetyContext {
         SafetyContext {
-            rules: HashMap::new(),
+            seccomp_rules: HashMap::new(),
+            #[cfg(feature = "landlock")]
+            landlock_rules: HashMap::new(),
             errno: 1,
+            all_threads: false,
+            #[cfg(feature = "landlock")]
+            only_landlock: false,
         }
     }
 
@@ -230,7 +268,7 @@ impl SafetyContext {
         self
     }
 
-    /// Gather unconditional and conditional rules to be provided to the seccomp context.
+    /// Gather unconditional and conditional seccomp rules to be provided to the seccomp context.
     #[allow(clippy::needless_pass_by_value)]
     fn gather_rules(rules: impl RuleSet) -> Vec<SeccompRule> {
         let base_syscalls = rules.simple_rules();
@@ -252,9 +290,32 @@ impl SafetyContext {
     /// Will return [`ExtraSafeError::ConditionalNoEffectError`] if a conditional rule is enabled at
     /// the same time as a simple rule for a syscall, which would override the conditional rule.
     pub fn enable(mut self, policy: impl RuleSet) -> Result<SafetyContext, ExtraSafeError> {
-        // Note that we can't do this check in each individual gather_rules because different
-        // policies may enable the same syscall.
+        #[cfg(feature = "landlock")]
+        self.enable_landlock_rules(&policy)?;
 
+        self.enable_seccomp_rules(policy)?;
+
+        Ok(self)
+    }
+
+    #[cfg(feature = "landlock")]
+    fn enable_landlock_rules(&mut self, policy: &impl RuleSet) -> Result<(), ExtraSafeError> {
+        let name = policy.name();
+        let rules = policy.landlock_rules().into_iter()
+            .map(|rule| (rule.path.clone(), LabeledLandlockRule(name, rule)));
+
+        for (path, labeled_rule) in rules {
+            if let Some(existing_rule) = self.landlock_rules.get(&path) {
+                return Err(ExtraSafeError::DuplicatePath(path.clone(), existing_rule.0, labeled_rule.0));
+            }
+            // value here is always none because we checked above that we're not inserting a path
+            // that already exists
+            let _always_none = self.landlock_rules.insert(path, labeled_rule);
+        }
+        Ok(())
+    }
+
+    fn enable_seccomp_rules(&mut self, policy: impl RuleSet) -> Result<(), ExtraSafeError> {
         let policy_name = policy.name();
         let new_rules = SafetyContext::gather_rules(policy)
             .into_iter()
@@ -264,7 +325,7 @@ impl SafetyContext {
             let new_rule = &labeled_new_rule.1;
             let syscall = &new_rule.syscall;
 
-            if let Some(existing_rules) = self.rules.get(syscall) {
+            if let Some(existing_rules) = self.seccomp_rules.get(syscall) {
                 for labeled_existing_rule in existing_rules {
                     let existing_rule = &labeled_existing_rule.1;
 
@@ -297,46 +358,145 @@ impl SafetyContext {
                 }
             }
 
-            self.rules
+            self.seccomp_rules
                 .entry(*syscall)
                 .or_insert_with(Vec::new)
                 .push(labeled_new_rule);
         }
 
-        Ok(self)
+        Ok(())
     }
+
+    #[cfg(feature = "landlock")]
+    /// Do not use seccomp at all, and only enable landlock filters.
+    pub fn landlock_only(mut self) -> SafetyContext {
+        self.only_landlock = true;
+        self
+    }
+
+    // TODO: unused, need to figure out a good way to do this without clasing with the existing
+    // seccomp argument-filtered/not-filtered checks
+    // #[cfg(feature = "landlock")]
+    // /// If there are both landlock and seccomp rules, and the seccomp rules are argument-filtered
+    // /// such that they would conflict with the operation of the landlock rules, return the names of
+    // /// the rulesets that they come from. This only gets called once in `SafetyContext::apply`
+    // /// because it iterates over all seccomp rules.
+    // ///
+    // /// Returns (seccomp_ruleset_name, landlock_ruleset_name)
+    // fn landlock_seccomp_rule_conflict(&self) -> Option<(&'static str, &'static str)> {
+    //     if let Some((_path, landlock_rule)) = self.landlock_rules.iter().next() {
+    //         for syscall in Self::landlock_restricted_syscalls() {
+    //             if let Some(existing_rules) = self.seccomp_rules.get(&syscall) {
+    //                 // the rules for a given syscall are either all argument-filtered rules or a single
+    //                 // unfiltered rule so either way this will stop after 1 iteration
+    //                 if let Some(labeled_rule) = existing_rules.iter().find(|rule| !rule.1.argument_filters.is_empty()) {
+    //                     return Some((labeled_rule.0, landlock_rule.0)); // return the names of the originating rulesets
+    //                 }
+    //             }
+    //         }
+    //     }
+    //     return None;
+    // }
+
+    // #[cfg(feature = "landlock")]
+    // // TODO: there doesn't seem to be anything in the official documentation about this?
+    // // this definitely isn't exhaustive
+    // fn landlock_restricted_syscalls() -> Vec<syscalls::Sysno> {
+    //     let mut syscalls = Vec::new();
+    //     syscalls.extend(builtins::systemio::IO_OPEN_SYSCALLS);
+    //     syscalls.extend(builtins::systemio::IO_METADATA_SYSCALLS);
+
+    //     syscalls
+    // }
 
     /// Load the [`SafetyContext`]'s rules into a seccomp filter and apply the filter to the current
     /// thread.
     ///
+    /// If the landlock feature is enabled but no landlock rules are applied, landlock is not
+    /// enabled, unless `landlock_only()` is called. To enable landlock but allow no file access,
+    /// you can first apply a `landlock_only()` `SafetyContext`, and then apply a separate
+    /// `SafetyContext` with your seccomp rules.
+    ///
     /// # Errors
-    /// May return [`ExtraSafeError::SeccompError`].
-    pub fn apply_to_current_thread(self) -> Result<(), ExtraSafeError> {
-        self.apply(false)
+    /// May return an [`ExtraSafeError`].
+    ///
+    /// If no rulesets are enabled, returns an `ExtraSafeError::NoRulesEnabled` error. If you
+    /// really want to enable "nothing", try enabling the `builtins::BasicCapabilities` default
+    /// ruleset manually, or create your own with e.g. just the `exit` syscall.
+    pub fn apply_to_current_thread(mut self) -> Result<(), ExtraSafeError> {
+        self.all_threads = false;
+        self.apply()
     }
 
     /// Load the [`SafetyContext`]'s rules into a seccomp filter and apply the filter to all threads in
     /// this process.
     ///
+    /// If the landlock feature is enabled but no landlock rules are applied, landlock is not
+    /// enabled, unless `landlock_only()` is called. To enable landlock but allow no file access,
+    /// you can first apply a `landlock_only()` `SafetyContext`, and then apply a separate
+    /// `SafetyContext` with your seccomp rules.
+    ///
     /// # Errors
-    /// May return [`ExtraSafeError::SeccompError`].
-    pub fn apply_to_all_threads(self) -> Result<(), ExtraSafeError> {
-        self.apply(true)
+    /// May return an [`ExtraSafeError`].
+    ///
+    /// If no rulesets are enabled, returns an `ExtraSafeError::NoRulesEnabled` error. If you
+    /// really want to enable "nothing", try enabling the `builtins::BasicCapabilities` default
+    /// ruleset manually, or create your own with e.g. just the `exit` syscall.
+    pub fn apply_to_all_threads(mut self) -> Result<(), ExtraSafeError> {
+        #[cfg(feature = "landlock")]
+        if !self.landlock_rules.is_empty() {
+            return Err(ExtraSafeError::LandlockNoThreadSync);
+        }
+        self.all_threads = true;
+        self.apply()
     }
 
-    /// Actually do the application of the rules. If `all_threads` is True, applies the rules to
-    /// all threads via seccomp tsync.
-    #[allow(unsafe_code)]
-    fn apply(mut self, all_threads: bool) -> Result<(), ExtraSafeError> {
+    /// Actually do the application of the rules. If `self.all_threads` is True, applies the rules to
+    /// all threads via seccomp tsync. If `self.only_landlock` is True, only applies landlock rules.
+    ///
+    /// If the landlock feature is enabled but no landlock rules are applied, landlock is not
+    /// enabled, unless `landlock_only()` is called. To enable landlock but allow no file access,
+    /// you can first apply a `landlock_only()` `SafetyContext`, and then apply a separate
+    /// `SafetyContext` with your seccomp rules.
+    ///
+    /// If no rulesets are enabled, returns an `ExtraSafeError::NoRulesEnabled` error. If you
+    /// really want to enable "nothing", try enabling the `builtins::BasicCapabilities` default
+    /// ruleset manually, or create your own with e.g. just the `exit` syscall.
+    fn apply(mut self) -> Result<(), ExtraSafeError> {
+        #[cfg(feature = "landlock")]
+        if self.seccomp_rules.is_empty() && self.landlock_rules.is_empty() {
+            return Err(ExtraSafeError::NoRulesEnabled);
+        }
+        #[cfg(not(feature = "landlock"))]
+        if self.seccomp_rules.is_empty() {
+            return Err(ExtraSafeError::NoRulesEnabled);
+        }
+
         self = self.enable(builtins::BasicCapabilities)?;
 
+        #[cfg(feature = "landlock")]
+        if self.only_landlock {
+            return self.apply_landlock_rules();
+        }
+        // If no landlock rules, do not try to apply them since it would prevent all filesystem
+        // access.
+        else if self.landlock_rules.is_empty() {
+            return self.apply_seccomp_rules();
+        }
+
+        #[cfg(feature = "landlock")]
+        self.apply_landlock_rules()?;
+        self.apply_seccomp_rules()
+    }
+
+    fn apply_seccomp_rules(self) -> Result<(), ExtraSafeError> {
         // Turn our internal HashMap into a BTreeMap for seccompiler, being careful to avoid
         // https://github.com/rust-vmm/seccompiler/issues/42 i.e. don't use BTreeMap's collect impl
         // because it will ignore duplicates.
 
         let mut rules_map: BTreeMap<i64, Vec<SeccompilerRule>> = BTreeMap::new();
 
-        for (syscall, labeled_rules) in self.rules {
+        for (syscall, labeled_rules) in self.seccomp_rules {
             let syscall = syscall.id().into();
 
             let mut seccompiler_rules = Vec::new();
@@ -352,7 +512,6 @@ impl SafetyContext {
             assert!(result.is_none(), "extrasafe logic error: somehow inserted the same syscall's rules twice");
         }
 
-
         #[cfg(not(all(target_arch = "x86_64", target_os = "linux")))]
         compile_error!("extrasafe is currently only supported on linux x86_64");
 
@@ -365,7 +524,7 @@ impl SafetyContext {
 
         let bpf_filter: seccompiler::BpfProgram = seccompiler_filter.try_into()?;
 
-        if all_threads {
+        if self.all_threads {
             seccompiler::apply_filter_all_threads(&bpf_filter)?;
         }
         else {
@@ -374,49 +533,23 @@ impl SafetyContext {
 
         Ok(())
     }
-}
 
-#[derive(Debug)]
-/// The error type produced by [`SafetyContext`]
-pub enum ExtraSafeError {
-    /// Error created when a simple Seccomp rule would override a conditional rule, or when trying to add a
-    /// conditional rule when there's already a simple rule with the same syscall.
-    ConditionalNoEffectError(syscalls::Sysno, &'static str, &'static str),
-    /// An error from the underlying seccomp library.
-    SeccompError(SeccompilerError),
-}
+    #[cfg(feature = "landlock")]
+    fn apply_landlock_rules(&self) -> Result<(), ExtraSafeError> {
+	let abi = ABI::V2;
+	let mut landlock_ruleset = Ruleset::default()
+            .set_compatibility(CompatLevel::HardRequirement)
+	    .handle_access(AccessFs::from_all(abi))?
+	    .create()?;
 
-impl fmt::Display for ExtraSafeError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            &Self::ConditionalNoEffectError(sysno, a, b) => write!(
-                f,
-                "A conditional rule on syscall `{}` from RuleSet `{}` would be overridden \
-                by a simple rule from RuleSet `{}`.",
-                sysno, a, b,
-            ),
-            Self::SeccompError(err) => write!(f, "Another seccomp error occured {:?}", err),
+        for LabeledLandlockRule(_policy_name, rule) in self.landlock_rules.values() {
+            // If path does not exist or is not accessible, just ignore it
+            if let Ok(fd) = PathFd::new(rule.path.clone()) {
+                let path_beneath = PathBeneath::new(fd, rule.access_rules);
+                landlock_ruleset = landlock_ruleset.add_rule(path_beneath)?;
+            }
         }
-    }
-}
-
-impl From<SeccompilerError> for ExtraSafeError {
-    fn from(value: SeccompilerError) -> Self {
-        Self::SeccompError(value)
-    }
-}
-
-impl From<seccompiler::BackendError> for ExtraSafeError {
-    fn from(value: seccompiler::BackendError) -> Self {
-        Self::SeccompError(SeccompilerError::from(value))
-    }
-}
-
-impl std::error::Error for ExtraSafeError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            Self::ConditionalNoEffectError(..) => None,
-            Self::SeccompError(err) => Some(err),
-        }
+	let _status = landlock_ruleset.restrict_self();
+        Ok(())
     }
 }

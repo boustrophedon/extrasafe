@@ -57,9 +57,41 @@ fn custom_ruleset() {
         .apply_to_current_thread().unwrap();
 }
 
+#[cfg(feature = "landlock")]
+fn with_landlock() {
+    use std::fs::File;
+    let tmp_dir_allow = tempfile::tempdir().unwrap().into_path();
+    let tmp_dir_deny = tempfile::tempdir().unwrap().into_path();
+
+    extrasafe::SafetyContext::new()
+        .enable(
+           extrasafe::builtins::SystemIO::nothing()
+              .allow_create_in_dir(&tmp_dir_allow)
+              .allow_write_file(&tmp_dir_allow)
+            ).unwrap()
+        .apply_to_current_thread().unwrap();
+
+    // Opening arbitrary files now fails!
+    let res = File::create(tmp_dir_deny.join("evil.txt"));
+    assert!(res.is_err());
+
+    // But the directory we allowed works
+    let res = File::create(tmp_dir_allow.join("my_output.txt"));
+    assert!(res.is_ok());
+
+    println!("printing to stdout is also allowed");
+    eprintln!("because read/write syscalls are unrestricted");
+
+    // And other syscalls are still disallowed
+    let res = std::net::UdpSocket::bind("127.0.0.1:0");
+    assert!(res.is_err());
+}
+
 fn main() {
     std::thread::spawn(simple_example).join().unwrap();
     std::thread::spawn(custom_ruleset).join().unwrap();
+    #[cfg(feature = "landlock")]
+    std::thread::spawn(with_landlock).join().unwrap();
 }
 
 #[test]
