@@ -30,11 +30,19 @@ possible? it should ideally also work transparently with tokio::main as well as 
 
 see also https://blog.lizzie.io/linux-containers-in-500-loc.html
 
+## custom landlock configurations?
+more than just file read/write path create/list/delete
+unix socket, named pipe, character device, symlink, deny truncate, etc
+
 ## Simple mode
 
 Something either like "Network::everything()" (rather than Network::nothing etc) and "SystemIO::everything" or a separate wrapper over the existing RuleSet mechanism.
 
 # Nice to haves
+
+- convenience function to enable ssl cert directories with landlock
+- convenience function to enable dns files/directories with landlock
+  - update examples to use them
 
 - more builtin profiles
 	take inspiration from pledge promises (https://man.openbsd.org/pledge.2)
@@ -53,11 +61,13 @@ Something either like "Network::everything()" (rather than Network::nothing etc)
   - could even match against built-in profiles and make suggestions
 
 - ctx.run(|| func)
-  rather than loading into the current thread, start a new thread and load the context just into that thread
+  rather than loading into the current thread, start a new thread and load the context just into that thread. additionally would make it easier/possible to use some of the unshare functionality built into clone
 - extrasafe! macro
   sugar over run() + get return value over channel
   need to determine what syscalls crossbeam channels need (if any) vs flume (if any) (std mpsc is going to be deprecated)
   - feature flag for macro with return value over channel
+- something to orchestrate "run these subthreads with these contexts but don't start them until the parent thread's context is loaded"
+  see halldisplay/render/src/main.rs
 
 # Multiplatform
 bsd: pledge

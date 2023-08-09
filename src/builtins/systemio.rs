@@ -4,23 +4,36 @@ use std::collections::{HashSet, HashMap};
 use std::fs::File;
 use std::os::unix::io::AsRawFd;
 
+#[cfg(feature = "landlock")]
+use std::path::{Path, PathBuf};
+
 use syscalls::Sysno;
+
+#[cfg(feature = "landlock")]
+use crate::LandlockRule;
+#[cfg(feature = "landlock")]
+use crate::landlock::{access, AccessFs, BitFlags};
 
 use crate::{RuleSet, SeccompRule};
 use super::YesReally;
 
-const IO_READ_SYSCALLS: &[Sysno] = &[Sysno::read, Sysno::readv, Sysno::preadv, Sysno::preadv2, Sysno::pread64, Sysno::lseek];
-const IO_WRITE_SYSCALLS: &[Sysno] = &[Sysno::write, Sysno::writev, Sysno::pwritev, Sysno::pwritev2, Sysno::pwrite64,
+pub(crate) const IO_READ_SYSCALLS: &[Sysno] = &[Sysno::read, Sysno::readv, Sysno::preadv, Sysno::preadv2, Sysno::pread64, Sysno::lseek];
+pub(crate) const IO_WRITE_SYSCALLS: &[Sysno] = &[Sysno::write, Sysno::writev, Sysno::pwritev, Sysno::pwritev2, Sysno::pwrite64,
                                       Sysno::fsync, Sysno::fdatasync, Sysno::lseek];
-const IO_OPEN_SYSCALLS: &[Sysno] = &[Sysno::open, Sysno::openat, Sysno::openat2];
-const IO_IOCTL_SYSCALLS: &[Sysno] = &[Sysno::ioctl, Sysno::fcntl];
+pub(crate) const IO_OPEN_SYSCALLS: &[Sysno] = &[Sysno::open, Sysno::openat, Sysno::openat2];
+pub(crate) const IO_IOCTL_SYSCALLS: &[Sysno] = &[Sysno::ioctl, Sysno::fcntl];
 // TODO: may want to separate fd-based and filename-based?
-const IO_METADATA_SYSCALLS: &[Sysno] = &[Sysno::stat, Sysno::fstat, Sysno::newfstatat,
+pub(crate) const IO_METADATA_SYSCALLS: &[Sysno] = &[Sysno::stat, Sysno::fstat, Sysno::newfstatat,
                                          Sysno::lstat, Sysno::statx,
                                          Sysno::getdents, Sysno::getdents64,
                                          Sysno::getcwd];
-const IO_CLOSE_SYSCALLS: &[Sysno] = &[Sysno::close, Sysno::close_range];
-const IO_UNLINK_SYSCALLS: &[Sysno] = &[Sysno::unlink, Sysno::unlinkat];
+pub(crate) const IO_CLOSE_SYSCALLS: &[Sysno] = &[Sysno::close, Sysno::close_range];
+pub(crate) const IO_UNLINK_SYSCALLS: &[Sysno] = &[Sysno::unlink, Sysno::unlinkat];
+
+// TODO: split into SystemIO, SystemIOLandlock, SystemIOSeccompRestricted so that you can't call a
+// landlock function after using a seccomp argument filter function (or vice versa). You can still
+// do it in separate .enable() calls so it doesn't make that big a difference but it would be nice
+// to have.
 
 /// A [`RuleSet`] representing syscalls that perform IO - open/close/read/write/seek/stat.
 ///
@@ -31,6 +44,9 @@ pub struct SystemIO {
     allowed: HashSet<Sysno>,
     /// Syscalls that are allowed with custom rules, e.g. only allow to specific fds
     custom: HashMap<Sysno, Vec<SeccompRule>>,
+    #[cfg(feature = "landlock")]
+    /// Landlock rules
+    landlock_rules: HashMap<PathBuf, LandlockRule>,
 }
 
 impl SystemIO {
@@ -39,6 +55,8 @@ impl SystemIO {
         SystemIO {
             allowed: HashSet::new(),
             custom: HashMap::new(),
+            #[cfg(feature = "landlock")]
+            landlock_rules: HashMap::new()
         }
     }
 
@@ -52,8 +70,6 @@ impl SystemIO {
             .allow_unlink()
             .allow_close()
     }
-
-
 
     /// Allow `read` syscalls.
     pub fn allow_read(mut self) -> SystemIO {
@@ -82,7 +98,7 @@ impl SystemIO {
     ///
     /// The reason this function returns a [`YesReally`] is because it's easy to accidentally combine
     /// it with another ruleset that allows `write` - for example the Network ruleset - even if you
-    /// only want to read files. Consider using `allow_open_directories()` or `allow_open_files()`.
+    /// only want to read files. Consider using `allow_open_directory()` or `allow_open_file()`.
     pub fn allow_open(mut self) -> YesReally<SystemIO> {
         self.allowed.extend(IO_OPEN_SYSCALLS);
 
@@ -234,7 +250,170 @@ impl RuleSet for SystemIO {
     fn conditional_rules(&self) -> HashMap<syscalls::Sysno, Vec<SeccompRule>> {
         self.custom.clone()
     }
+
+    #[cfg(feature = "landlock")]
+    fn landlock_rules(&self) -> Vec<LandlockRule> {
+        self.landlock_rules.values().cloned().collect()
+    }
+
     fn name(&self) -> &'static str {
         "SystemIO"
+    }
+}
+
+// landlock impls for SystemIO
+
+#[cfg(feature = "landlock")]
+impl SystemIO {
+    fn insert_flags(&mut self, path: impl AsRef<Path>, new_flags: BitFlags<AccessFs>) {
+        let path = path.as_ref().to_path_buf();
+        let _flag = self.landlock_rules.entry(path.clone())
+            .and_modify(|existing_flags| existing_flags.access_rules.insert(new_flags))
+            .or_insert_with(|| LandlockRule::new(&path, new_flags));
+    }
+
+    /// Use Landlock to allow only files within the specified directory, or the specific file, to
+    /// be read. If this function is called multiple times, all directories and files passed will
+    /// be allowed.
+    ///
+    /// Note that if this is used with [`allow_open_readonly`] or other syscall-argument restricting
+    /// methods, applying the `SafetyContext` will fail.
+    pub fn allow_read_path(mut self, path: impl AsRef<Path>) -> SystemIO {
+        let new_flags = access::read_path();
+        self.insert_flags(path, new_flags);
+
+        // allow relevant syscalls as well
+        self.allow_close()
+            .allow_read()
+            .allow_metadata()
+            .allow_open().yes_really()
+    }
+
+    /// Use Landlock to allow only the specified file to be written to. If this function is called
+    /// multiple times, all files passed will be allowed.
+    ///
+    /// Note that if this is used with [`allow_open_readonly`] or other syscall-argument restricting
+    /// methods, applying the `SafetyContext` will fail.
+    pub fn allow_write_file(mut self, path: impl AsRef<Path>) -> SystemIO {
+        let new_flags = access::write_file();
+        self.insert_flags(path, new_flags);
+
+        // allow relevant syscalls as well
+        self.allow_close()
+            .allow_write()
+            .allow_metadata()
+            .allow_open().yes_really()
+    }
+
+    /// Use Landlock to allow files to be created in the given directory. If this function is called
+    /// multiple times, all directories passed will be allowed.
+    ///
+    /// Note that if this is used with [`allow_open_readonly`] or other syscall-argument restricting
+    /// methods, applying the `SafetyContext` will fail.
+    pub fn allow_create_in_dir(mut self, path: impl AsRef<Path>) -> SystemIO {
+        // write file here allows us to create files, but in order to actually write to them, you'd
+        // need to enable the write syscall.
+        let new_flags = access::create_file() | access::write_file();
+        self.insert_flags(path, new_flags);
+
+        // allow relevant syscalls as well
+        self.allowed.extend(&[Sysno::creat]);
+        self.allow_open().yes_really()
+    }
+
+    /// Use Landlock to allow listing the contents of the given directory. If this function is
+    /// called multiple times, all directories passed will be allowed.
+    pub fn allow_list_dir(mut self, path: impl AsRef<Path>) -> SystemIO {
+        let new_flags = access::list_dir();
+        self.insert_flags(path, new_flags);
+
+        // allow relevant syscalls as well
+        self.allow_metadata()
+            .allow_close()
+            .allow_ioctl()
+            .allow_open().yes_really()
+    }
+
+    /// Use Landlock to allow creating directories. If this function is called multiple times, all
+    /// directories passed will be allowed.
+    pub fn allow_create_dir(mut self, path: impl AsRef<Path>) -> SystemIO {
+        let new_flags = access::create_dir();
+        self.insert_flags(path, new_flags);
+
+        // allow relevant syscalls as well
+        self.allowed.extend(&[Sysno::mkdir, Sysno::mkdirat]);
+        self
+    }
+
+    /// Use Landlock to allow deleting files. If this function is called multiple times, all files
+    /// passed will be allowed.
+    pub fn allow_remove_file(mut self, path: impl AsRef<Path>) -> SystemIO {
+        let new_flags = access::delete_file();
+        self.insert_flags(path, new_flags);
+
+        // allow relevant syscalls as well
+        self.allowed.extend(&[Sysno::unlink, Sysno::unlinkat]);
+        self
+    }
+
+    /// Use Landlock to allow deleting directories. If this function is called multiple times, all
+    /// directories passed will be allowed.
+    ///
+    /// Note that this allows you to delete the contents of the *subdirectories* of this directory,
+    /// not the directory itself.
+    ///
+    /// Also recall that that in order to delete a directory with `unlink` or `rmdir` it must be
+    /// empty.
+    pub fn allow_remove_dir(mut self, path: impl AsRef<Path>) -> SystemIO {
+        let new_flags = access::delete_dir();
+        self.insert_flags(path, new_flags);
+
+        // allow relevant syscalls as well
+        // unlinkat may be be used to remove directories as well so we include it here, since files
+        // will be protected by landlock anyway.
+        self.allowed.extend(&[Sysno::rmdir, Sysno::unlinkat]);
+        self
+    }
+}
+
+// TODO: figure out a good way to put this into the Networking Ruleset?
+// the biggest issue is that stuff like allow_close, allow_read is defined here and there's not a
+// great way to compose different parts from different RuleSets. It might be best to directly
+// expose the internal allowed, conditional_rules, landlock_rules as &mut pointers (and then also
+// keep the gather_rules) so that you can basically mix and match from different rulesets in a
+// single function
+#[cfg(feature = "landlock")]
+impl SystemIO {
+    /// Use Landlock to allow access to SSL certificates in /etc/ssl, /etc/ca-certificates, etc
+    ///
+    /// Note that crates using rustls and webpki-roots you actually don't need these because the
+    /// certificates are embedded in the output binary.
+    pub fn allow_ssl_files(mut self) -> SystemIO {
+        let new_flags = access::read_path() | access::list_dir();
+        for path in &["/etc/ssl/certs", "/etc/ca-certificates"] {
+            self.insert_flags(path, new_flags);
+        }
+        // I'm not 100% sure why openssl is checking localtime but it appears to be doing so
+        self.insert_flags("/etc/localtime", access::read_path());
+
+        // allow relevant syscalls as well
+        self.allow_close()
+            .allow_read()
+            .allow_metadata()
+            .allow_open().yes_really()
+    }
+
+    /// Use Landlock to allow access to DNS files, like /etc/resolv.conf
+    pub fn allow_dns_files(mut self) -> SystemIO {
+        let new_flags = access::read_path();
+        // TODO: libnss exec perms?
+        for path in &["/etc/resolv.conf", "/etc/hosts", "/etc/host.conf", "/etc/nsswitch.conf", "/etc/gai.conf"] {
+            self.insert_flags(path, new_flags);
+        }
+        // allow relevant syscalls as well
+        self.allow_close()
+            .allow_read()
+            .allow_metadata()
+            .allow_open().yes_really()
     }
 }

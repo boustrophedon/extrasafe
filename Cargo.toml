@@ -9,10 +9,14 @@ license = "MIT"
 keywords = ["security", "seccomp", "syscall"]
 categories = ["os::linux-apis"]
 
+[features]
+landlock = ["dep:landlock"]
+
 [dependencies]
 seccompiler = { version = "^0.4", default-features = false }
 libc = "^0.2"
 syscalls = { version = "^0.6", default-features = false }
+landlock = { version ="^0.3", optional = true }
 
 [dev-dependencies]
 bytes = "^1"
@@ -23,5 +27,10 @@ tempfile = "^3"
 tokio = "^1.15"
 hyper = { version = "^0.14", features = ["http1", "server", "runtime", "tcp"] }
 warp = "^0.3"
-reqwest = { version = "^0.11", default-features = false, features = ["rustls-tls"] }
 rusqlite = "^0.26"
+
+[target.'cfg(target_env = "musl")'.dev-dependencies]
+reqwest = { version = "^0.11", default-features = false, features = ["rustls-tls"] }
+
+[target.'cfg(not(target_env = "musl"))'.dev-dependencies]
+reqwest = { version = "^0.11" }

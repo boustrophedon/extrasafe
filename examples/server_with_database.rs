@@ -218,43 +218,51 @@ fn run_client_read() {
         .enable_all()
         .build().unwrap();
 
-    // Open client before extrasafe context so that it can read ssl certificates and dns stuff
     let client = reqwest::Client::new();
 
     // enable extrasafe context
-    SafetyContext::new()
+    let ctx = SafetyContext::new()
         .enable(Networking::nothing()
             // Necessary for DNS
             .allow_start_udp_servers().yes_really()
-            .allow_start_tcp_clients()).unwrap()
+            .allow_start_tcp_clients()
+            ).unwrap()
         // For some reason only if we make two requests with a client does it use multiple threads,
         // so we only need them in the reader thread rather than the writer.
         .enable(Threads::nothing()
-            .allow_create()).unwrap()
-        // Read required to get DNS info (e.g. resolv.conf) and read ssl certificates.
-        // TODO: Is there a way to do this ahead of time?
-        .enable(
+            .allow_create()).unwrap();
+
+    #[cfg(feature = "landlock")]
+    let ctx = ctx.enable(
+            SystemIO::nothing()
+                .allow_dns_files()
+                .allow_ssl_files()
+        ).unwrap();
+    #[cfg(not(feature = "landlock"))]
+    let ctx = ctx.enable(
             SystemIO::nothing()
                 .allow_open_readonly()
                 .allow_read()
                 .allow_metadata()
                 .allow_close(),
-        )
-        .unwrap()
-        .apply_to_current_thread()
+        ).unwrap();
+
+    ctx.apply_to_current_thread()
         .unwrap();
 
     // make request
     runtime.block_on(async {
         // Show that we can resolve dns and do ssl. Data returned isn't checked or used anywhere,
         // we just get it.
-        let resp = client.get("https://example.org/").send().await.unwrap();
+        let resp = client.get("https://example.org").send().await.unwrap();
         let res = resp.text().await;
         assert!(
             res.is_ok(),
             "failed getting example.org response: {:?}",
             res.unwrap_err()
         );
+        let text = res.unwrap();
+        println!("first 10 bytes of response from example.org {}", &text[..10]);
 
         let res = client.get("http://127.0.0.1:5575/read").send().await;
         assert!(

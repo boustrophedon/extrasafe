@@ -48,26 +48,33 @@ See the [examples directory](https://github.com/boustrophedon/extrasafe/tree/mas
 The `RuleSet` trait is defined as follows:
 
 ```rust
-/// A [`RuleSet`] is a collection of [`SeccompRule`] s that enable a
+/// A [`RuleSet`] is a collection of [`SeccompRule`] and [`LandlockRule`] s that enable a
 /// functionality, such as opening files or starting threads.
 pub trait RuleSet {
-    /// A simple rule is one that just allows the syscall without restriction.
+    /// A simple rule is a seccomp rule that just allows the syscall without restriction.
     fn simple_rules(&self) -> Vec<syscalls::Sysno>;
 
-    /// A conditional rule is a rule that uses a condition to restrict the syscall, e.g. only
+    /// A conditional rule is a seccomp rule that uses a condition to restrict the syscall, e.g. only
     /// specific flags as parameters.
     fn conditional_rules(&self) -> HashMap<syscalls::Sysno, Vec<SeccompRule>>;
 
     /// The name of the profile.
     fn name(&self) -> &'static str;
-}
 
+    #[cfg(feature = "landlock")]
+    /// A landlock rule is a pair of an access control (e.g. read/write access, directory creation
+    /// access) and a directory or path.
+    fn landlock_rules(&self) -> Vec<LandlockRule> {
+        Vec::new()
+    }
+}
 ```
 
 The RuleSet is comprised of
 - A list of "simple rules", which enables the syscall without restriction
 - A map of syscalls to a list of "Rules", which are pairs of a syscall and conditions on its arguments.
 - The name of the RuleSet, for error message reporting purposes
+- Landlock rules, which will be covered in the Landlock section
 
 There are a few restrictions to note about `RuleSet`s that originate in seccomp:
 
@@ -131,3 +138,55 @@ See the [extrasafe documentation](https://docs.rs/extrasafe/latest/macro.seccomp
 Currently [the syscalls crate's](https://crates.io/crates/syscalls) [`Sysno` enum](https://docs.rs/syscalls/latest/syscalls/enum.Sysno.html) is used in the `RuleSet` interface. It's convenient because the enum is defined separately for each target architecture such that the syscall gets mapped to the correct syscall number (which may differ on different architectures).
 
 However, there are some syscalls that only exist on certain architectures (e.g. fstatat64 vs newfstatat). Currently the builtin RuleSets are defined assuming `x86_64`.
+
+# Landlock
+
+If the crate feature "landlock" is active, and a SafetyContext enables a RuleSet that provides a non-empty Vec from its `landlock_rules` method, Landlock will be enabled. Landlock can be applied independently of seccomp by using the `SafetyContext::landlock_only()` before applying the context to the current thread.
+
+Landlock allows you to restrict access to the filesystem via a variety of [access rights](https://www.kernel.org/doc/html/latest/userspace-api/landlock.html#access-rights). These access rights are applied either to existing files, or on existing directories, in which case the right will apply to all subdirectories and subfiles.
+
+The easiest way to use Landlock is via the SystemIO ruleset, which provides methods like `allow_create_in_dir`, `allow_read_path`, and `allow_write_file`.
+
+If you want to implement your own LandlockRules, you can look at the `extrasafe::landlock::access` module to see what is currently exposed or you can use the [AccessFs](https://docs.rs/landlock/latest/landlock/enum.AccessFs.html) enum directly and create `extrasafe::LandlockRule`s manually.
+
+Here's some example code using landlock to allow file creation/write access in a single directory:
+
+```rust
+fn with_landlock() {
+    let tmp_dir_allow = tempfile::tempdir().unwrap().into_path();
+    let tmp_dir_deny = tempfile::tempdir().unwrap().into_path();
+
+    extrasafe::SafetyContext::new()
+        .enable(
+           extrasafe::builtins::SystemIO::nothing()
+              .allow_create_in_dir(&tmp_dir_allow)
+              .allow_write_file(&tmp_dir_allow)
+        ).unwrap()
+	.apply_to_current_thread().unwrap();
+
+    // Opening arbitrary files now fails!
+    let res = File::create(tmp_dir_deny.join("evil.txt"));
+    assert!(res.is_err());
+
+    // But the directory we allowed works
+    let res = File::create(tmp_dir_allow.join("my_output.txt"));
+    assert!(res.is_ok());
+
+    println!("printing to stdout is also allowed");
+    eprintln!("because read/write syscalls are unrestricted");
+
+    // And other syscalls are still disallowed
+    let res = std::net::UdpSocket::bind("127.0.0.1:0");
+    assert!(res.is_err());
+}
+```
+
+## Caveats
+
+The existing groupings in SystemIO are a bit too orthogonal - `allow_create_in_dir` by itself will not allow you to create files because you need to also call `allow_write_file` typically unless you're very tightly controlling the flags passed to the openat/creat syscall.
+
+It's also a bit hard to create your own RuleSets with landlock rules because the corresponding syscalls also need to be enabled. A future refactoring of the RuleSet trait may allow more easy cross-use and re-use of functions implemented on individual RuleSet implementors, so that one RuleSet can enable a grouping of syscalls defined in another. Another option is to detect which syscalls are needed by which landlock access rights, and simply enable them inside the `SafetyContext::apply*` functions.
+
+Relatedly, we also enable possibly more syscalls than are strictly necessary (e.g. ioctl and fcntl) when enabling landlock since we're currently just using the existing pre-defined groups in SystemIO.
+
+`SafetyContext::apply_to_all_threads` does not work with landlock. However, landlock is inherited by child threads and processes like seccomp.

@@ -267,31 +267,38 @@ fn run_client_read() {
         .build()
         .unwrap();
 
-    // Open client before extrasafe context so that it can read ssl certificates and dns stuff
     let client = reqwest::Client::new();
 
     // enable extrasafe context
-    SafetyContext::new()
+    let ctx = SafetyContext::new()
         .enable(Networking::nothing()
             // Necessary for DNS
             .allow_start_udp_servers().yes_really()
-            .allow_start_tcp_clients()).unwrap()
+            .allow_start_tcp_clients()
+            ).unwrap()
         // For some reason only if we make two requests with a client does it use multiple threads,
         // so we only need them in the reader thread rather than the writer.
         .enable(Threads::nothing()
-            .allow_create()).unwrap()
-        // Read required to get DNS info (e.g. resolv.conf) and read ssl certificates.
-        // TODO: Is there a way to do this ahead of time?
-        .enable(
+            .allow_create()).unwrap();
+
+    #[cfg(not(feature = "landlock"))]
+    let ctx = ctx.enable(
             SystemIO::nothing()
                 .allow_open_readonly()
                 .allow_read()
                 .allow_metadata()
                 .allow_close(),
-        )
-        .unwrap()
-        .apply_to_current_thread()
+        ).unwrap();
+    #[cfg(feature = "landlock")]
+    let ctx = ctx.enable(
+            SystemIO::nothing()
+                .allow_dns_files()
+                .allow_ssl_files()
+        ).unwrap();
+
+    ctx.apply_to_current_thread()
         .unwrap();
+
 
     // make request
     runtime.block_on(async {

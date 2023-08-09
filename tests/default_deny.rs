@@ -3,6 +3,8 @@ use std::io::Write;
 
 use tempfile::{tempdir, tempfile};
 
+use extrasafe::builtins::BasicCapabilities as Basic;
+
 // NOTE: probably issues with running cargo test with --num-threads 1
 
 #[test]
@@ -20,6 +22,7 @@ fn filesystem_no_read() {
     drop(file);
 
     let res = extrasafe::SafetyContext::new()
+        .enable(Basic).unwrap()
         .apply_to_current_thread();
     assert!(res.is_ok(), "Extrasafe failed {:?}", res.unwrap_err());
 
@@ -44,6 +47,7 @@ fn filesystem_no_write() {
     let mut file = tempfile().unwrap();
 
     let res = extrasafe::SafetyContext::new()
+        .enable(Basic).unwrap()
         .apply_to_current_thread();
     assert!(res.is_ok(), "Extrasafe failed {:?}", res.unwrap_err());
 
@@ -68,6 +72,7 @@ fn filesystem_no_create() {
     let dir = tempdir().unwrap();
 
     let res = extrasafe::SafetyContext::new()
+        .enable(Basic).unwrap()
         .apply_to_current_thread();
     assert!(res.is_ok(), "Extrasafe failed {:?}", res.unwrap_err());
 

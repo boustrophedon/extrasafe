@@ -27,7 +27,7 @@ fn main() {
 
 You've used safe and unsafe Rust: now your code can be extrasafe.
 
-extrasafe is a wrapper around [the Linux kernel's seccomp](https://www.kernel.org/doc/html/latest/userspace-api/seccomp_filter.html) syscall-filtering functionality to prevent your program from calling syscalls you don't need. Seccomp is used by systemd, Chrome, application sandboxes like bubblewrap and firejail, and container runtimes. Seccomp by itself is not a complete sandboxing system.
+extrasafe is a wrapper around [the Linux kernel's seccomp](https://www.kernel.org/doc/html/latest/userspace-api/seccomp_filter.html) syscall-filtering functionality to prevent your program from calling syscalls you don't need, with support for [the Landlock Linux Security Module](https://landlock.io/). Seccomp is used by systemd, Chrome, application sandboxes like bubblewrap and firejail, and container runtimes. Seccomp by itself is not a complete sandboxing system.
 
 The goal of extrasafe is to make it easy to add extra security to your own programs without having to rely on external configuration by the person running the software.
 
@@ -37,6 +37,36 @@ Additionally, we support slightly advanced use-cases:
   - Allow read/write on only stdin/out/err
   - Allow read/write on specific files (opened before loading the seccomp filters)
   - You can define your own set of syscalls to allow by implementing the RuleSet trait.
+
+We also support using Landlock to allow specific, targetted access to the filesystem:
+
+```rust
+fn main() {
+    let tmp_dir_allow = tempfile::tempdir().unwrap().into_path();
+    let tmp_dir_deny = tempfile::tempdir().unwrap().into_path();
+
+    extrasafe::SafetyContext::new()
+        .enable(
+           extrasafe::builtins::SystemIO::nothing()
+              .allow_create_in_dir(&tmp_dir_allow)
+              .allow_write_file(&tmp_dir_allow)
+        ).unwrap()
+	.apply_to_current_thread().unwrap();
+
+    // Opening arbitrary files now fails!
+    assert!(File::create(tmp_dir_deny.join("evil.txt"))
+        .is_err());
+
+    // But the directory we allowed works
+    assert!(File::create(tmp_dir_allow.join("my_output.txt"))
+        .is_ok());
+
+    // And other syscalls are still disallowed
+    assert!(std::net::UdpSocket::bind("127.0.0.1:0")
+        .is_err());
+}
+}
+```
 
 Check out the [**user guide here**](https://github.com/boustrophedon/extrasafe/blob/master/user-guide.md)
 
@@ -60,7 +90,7 @@ You may be able to use extrasafe to help test certain edge-cases, like the netwo
 
 # Why?
 
-So you can be extra safe. Suppose your program has a dependency with an undiscovered RCE lurking somewhere: extrasafe allows you to partially hedge against that by disabling access to functionality you don't need.
+So you can be extra safe. Suppose your program has a dependency with an undiscovered RCE lurking somewhere: extrasafe allows you to partially hedge against that by disabling access to functionality and files you don't need.
 
 ## Specific examples of vulnerabilities that could avoid exploitation with seccomp (looking for contributions!)
 
@@ -82,8 +112,7 @@ So you can be extra safe. Suppose your program has a dependency with an undiscov
 
 Seccomp filters are a somewhat blunt tool.
 
-- They don't allow you to filter by path name in `open` calls, or indeed any syscall arguments that are pointers (but see below about Landlock!)
-	- In particular, this can make SSL somewhat annoying because you have to open a bunch of files to check for certificates.
+- They don't allow you to filter by path name in `open` calls, or indeed any syscall arguments that are pointers (but we now support Landlock!)
 - Their smallest unit of scope is a thread, so if you want to protect possibly risky parsing code in a hot inner loop, you may need to figure out a way to pass data back and forth quickly to an existing thread, rather than spinning up a new thread each time.
 
 # Why not X?
@@ -110,14 +139,6 @@ To those sysadmins or devops reading this and saying "but I don't want to trust 
 As mentioned above, you should continue to use Linux Security Modules like AppArmor and SELinux! Not every program will be using extrasafe.
 
 In the same way, from the perspective of a developer, there's no guarantee that the person running your code is using them. When there's a bug in your open-source code running on thousands of machines outside of your control, it's much nicer to know that it's not easily exploitable and can be fixed at your leisure, rather than having to coordinate a massive patch-and-upgrade effort to secure the systems. 
-
-## Landlock
-
-[Landlock](https://landlock.io/) is a new LSM that [exposes an ABI via new syscalls](https://www.kernel.org/doc/html/latest/userspace-api/landlock.html) for userland developers to use, which mitigates the issues described above with regards to filtering on specific filesystem paths.
-
-However, it's very new so older systems very likely don't have access to it, and it also only currently supports filesystem-related functionality.
-
-It does seem to be the way forward in the future.
 
 # Development
 
