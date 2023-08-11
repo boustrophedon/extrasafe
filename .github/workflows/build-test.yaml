@@ -21,7 +21,7 @@ jobs:
     # - name: Run cargo fmt
     #   run: cargo fmt --all -- --check
       - name: Run cargo clippy
-        run: ./clippy.sh
+        run: make lint
   test:
     name: Unit Tests
     runs-on: ubuntu-latest
@@ -33,18 +33,16 @@ jobs:
       - name: Install libseccomp
         run: sudo apt-get install libseccomp-dev
       - name: Run tests
-        run: cargo test --tests --examples
+        run: make test-ci
 
   doc:
     name: Documentation Check
     runs-on: ubuntu-latest
-    env:
-      RUSTDOCFLAGS: -Dwarnings
     steps:
       - name: Checkout
         uses: actions/checkout@v2
       - name: Generate documentation
-        run: cargo doc --no-deps
+        run: make doc
 
   coverage:
     name: Code Coverage
@@ -55,11 +53,11 @@ jobs:
       - name: Install libseccomp
         run: sudo apt-get install libseccomp-dev
       - name: Install Rust
-        run: rustup toolchain install nightly --component llvm-tools-preview
+        run: rustup toolchain install stable --component llvm-tools
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
       - name: Generate code coverage
-        run: cargo llvm-cov --tests --examples --all-targets --all-features --workspace --lcov --output-path lcov.info
+        run: make coverage-ci
       - name: Upload coverage to coveralls
         uses: coverallsapp/github-action@master
         with:
