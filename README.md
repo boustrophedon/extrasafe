@@ -118,3 +118,19 @@ In the same way, from the perspective of a developer, there's no guarantee that 
 However, it's very new so older systems very likely don't have access to it, and it also only currently supports filesystem-related functionality.
 
 It does seem to be the way forward in the future.
+
+# Development
+
+Using make as a simple command runner until `just` is packaged for Ubuntu/Debian, or you can run the cargo commands directly.
+
+## Tests
+
+`make test`
+
+## Lint / clippy
+
+`make lint`
+
+## Code coverage
+
+`make coverage`
