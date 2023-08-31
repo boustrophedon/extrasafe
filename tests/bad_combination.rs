@@ -76,3 +76,81 @@ fn invalid_combination_new_conditional_different_name() {
     let err = res.unwrap_err();
     assert_eq!(err.to_string(), "A conditional rule on syscall `write` from RuleSet `SystemIO` would be overridden by a simple rule from RuleSet `JustWrite`.");
 }
+
+#[test]
+/// Test that adding a conditional and simple rule in the same RuleSet produces an error
+fn invalid_combination_read_and_stdin() {
+
+    let res = extrasafe::SafetyContext::new()
+        .enable(SystemIO::nothing()
+            .allow_read()
+            .allow_stdin()
+        );
+    assert!(res.is_err(), "Extrasafe didn't fail when adding conflicting rules");
+
+    let err = res.unwrap_err();
+    assert_eq!(err.to_string(), "A conditional rule on syscall `read` from RuleSet `SystemIO` would be overridden by a simple rule from RuleSet `SystemIO`.");
+}
+
+#[test]
+/// Test that adding duplicate simple rules in the same RuleSet doesn't produce an error
+fn not_invalid_combination_duplicate_simple() {
+
+    let res = extrasafe::SafetyContext::new()
+        .enable(SystemIO::nothing()
+            .allow_read()
+            .allow_read()
+        );
+    assert!(res.is_ok());
+
+    let res = res.unwrap().apply_to_current_thread();
+    assert!(res.is_ok());
+}
+
+#[test]
+/// Test that adding duplicate simple rules in the same RuleSet doesn't produce an error
+fn not_invalid_combination_duplicate_simple2() {
+
+    let res = extrasafe::SafetyContext::new()
+        .enable(SystemIO::nothing()
+            .allow_read()).unwrap()
+        .enable(SystemIO::nothing()
+            .allow_read()
+        );
+    assert!(res.is_ok());
+
+    let res = res.unwrap().apply_to_current_thread();
+    assert!(res.is_ok());
+}
+
+#[test]
+/// Test that adding duplicate conditional rules in the same RuleSet doesn't produce an error
+fn not_invalid_combination_duplicate_conditional() {
+
+    let res = extrasafe::SafetyContext::new()
+        .enable(SystemIO::nothing()
+            .allow_stdin()
+            .allow_stdin()
+        );
+    assert!(res.is_ok());
+
+    let res = res.unwrap().apply_to_current_thread();
+    assert!(res.is_ok());
+}
+
+#[test]
+/// Test that adding duplicate conditional rules in the same RuleSet doesn't produce an error
+fn not_invalid_combination_duplicate_conditional2() {
+
+    let res = extrasafe::SafetyContext::new()
+        .enable(SystemIO::nothing()
+            .allow_stdin()
+        ).unwrap()
+        .enable(SystemIO::nothing()
+            .allow_stdin()
+        );
+    assert!(res.is_ok());
+
+    let res = res.unwrap().apply_to_current_thread();
+    assert!(res.is_ok());
+}

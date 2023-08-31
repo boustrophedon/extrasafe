@@ -121,12 +121,10 @@ impl SafetyContext {
         let base_syscalls = rules.simple_rules();
         let mut rules = rules.conditional_rules();
         for syscall in base_syscalls {
-            if !rules.contains_key(&syscall) {
-                let rule = SeccompRule::new(syscall);
-                rules.entry(syscall)
-                    .or_insert_with(Vec::new)
-                    .push(rule);
-            }
+            let rule = SeccompRule::new(syscall);
+            rules.entry(syscall)
+                .or_insert_with(Vec::new)
+                .push(rule);
         }
 
         rules.into_values().flatten()
@@ -157,22 +155,30 @@ impl SafetyContext {
 
                     let new_is_simple = new_rule.comparators.is_empty();
                     let existing_is_simple = existing_rule.comparators.is_empty();
-                    let same_syscall = new_rule.syscall == existing_rule.syscall;
 
-                    if same_syscall && new_is_simple && !existing_is_simple {
+                    // if one rule is conditional and the other is simple, let the user know there
+                    // would be a conflict and raise an error.
+                    if new_is_simple && !existing_is_simple {
                         return Err(ExtraSafeError::ConditionalNoEffectError(
                             new_rule.syscall,
                             labeled_existing_rule.0,
                             labeled_new_rule.0,
                         ));
                     }
-                    if same_syscall && !new_is_simple && existing_is_simple {
+                    else if !new_is_simple && existing_is_simple {
                         return Err(ExtraSafeError::ConditionalNoEffectError(
                             new_rule.syscall,
                             labeled_new_rule.0,
                             labeled_existing_rule.0,
                         ));
                     }
+                    // otherwise, they're either both conditional rules or both simple rules,
+                    // in which case we continue to check the existing filters, and then add the
+                    // rules to our filter as normal if all checks pass.
+                    //
+                    // In the end, the rules for a syscall must either be all simple (i.e.
+                    // duplicates from different rulesets) or all conditional (e.g. multiple rules
+                    // allowing read to be called on specific fds)
                 }
             }
 
@@ -248,7 +254,8 @@ pub enum ExtraSafeError {
     /// Error created when trying to apply filters on non-Linux operating systems. Should never
     /// occur.
     UnsupportedOSError,
-    /// Error created when a simple rule would override a conditional rule.
+    /// Error created when a simple Seccomp rule would override a conditional rule, or when trying to add a
+    /// conditional rule when there's already a simple rule with the same syscall.
     ConditionalNoEffectError(syscalls::Sysno, &'static str, &'static str),
     /// An error from the underlying seccomp library.
     SeccompError(libseccomp::error::SeccompError),
