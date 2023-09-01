@@ -17,9 +17,7 @@ impl<T> YesReally<T> {
     /// Make a [`YesReally`].
     #[must_use]
     pub fn new(inner: T) -> YesReally<T> {
-        YesReally {
-            inner,
-        }
+        YesReally { inner }
     }
 }
 

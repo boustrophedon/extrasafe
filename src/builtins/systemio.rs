@@ -1,25 +1,46 @@
 //! Contains a [`RuleSet`] for allowing IO-related syscalls, like file opening, reading, and writing.
 
-use std::collections::{HashSet, HashMap};
+use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::os::unix::io::AsRawFd;
 
 use libseccomp::*;
 use syscalls::Sysno;
 
-use crate::{RuleSet, SeccompRule};
 use super::YesReally;
+use crate::{RuleSet, SeccompRule};
 
-const IO_READ_SYSCALLS: &[Sysno] = &[Sysno::read, Sysno::readv, Sysno::preadv, Sysno::preadv2, Sysno::pread64, Sysno::lseek];
-const IO_WRITE_SYSCALLS: &[Sysno] = &[Sysno::write, Sysno::writev, Sysno::pwritev, Sysno::pwritev2, Sysno::pwrite64,
-                                      Sysno::fsync, Sysno::fdatasync, Sysno::lseek];
+const IO_READ_SYSCALLS: &[Sysno] = &[
+    Sysno::read,
+    Sysno::readv,
+    Sysno::preadv,
+    Sysno::preadv2,
+    Sysno::pread64,
+    Sysno::lseek,
+];
+const IO_WRITE_SYSCALLS: &[Sysno] = &[
+    Sysno::write,
+    Sysno::writev,
+    Sysno::pwritev,
+    Sysno::pwritev2,
+    Sysno::pwrite64,
+    Sysno::fsync,
+    Sysno::fdatasync,
+    Sysno::lseek,
+];
 const IO_OPEN_SYSCALLS: &[Sysno] = &[Sysno::open, Sysno::openat, Sysno::openat2];
 const IO_IOCTL_SYSCALLS: &[Sysno] = &[Sysno::ioctl, Sysno::fcntl];
 // TODO: may want to separate fd-based and filename-based?
-const IO_METADATA_SYSCALLS: &[Sysno] = &[Sysno::stat, Sysno::fstat, Sysno::newfstatat,
-                                         Sysno::lstat, Sysno::statx,
-                                         Sysno::getdents, Sysno::getdents64,
-                                         Sysno::getcwd];
+const IO_METADATA_SYSCALLS: &[Sysno] = &[
+    Sysno::stat,
+    Sysno::fstat,
+    Sysno::newfstatat,
+    Sysno::lstat,
+    Sysno::statx,
+    Sysno::getdents,
+    Sysno::getdents64,
+    Sysno::getcwd,
+];
 const IO_CLOSE_SYSCALLS: &[Sysno] = &[Sysno::close, Sysno::close_range];
 
 /// A [`RuleSet`] representing syscalls that perform IO - open/close/read/write/seek/stat.
@@ -48,12 +69,11 @@ impl SystemIO {
         SystemIO::nothing()
             .allow_read()
             .allow_write()
-            .allow_open().yes_really()
+            .allow_open()
+            .yes_really()
             .allow_metadata()
             .allow_close()
     }
-
-
 
     /// Allow `read` syscalls.
     #[must_use]
@@ -103,18 +123,19 @@ impl SystemIO {
         // WRONLY or RDWR is required for O_TMPFILE so we're fine to leave it out anyway.
         // const O_TMPFILE: u64 = libc::O_TMPFILE as u64;
 
-        const WRITECREATE: u64 = O_WRONLY | O_RDWR | O_APPEND | O_CREAT | O_EXCL;// | O_TMPFILE;
+        const WRITECREATE: u64 = O_WRONLY | O_RDWR | O_APPEND | O_CREAT | O_EXCL; // | O_TMPFILE;
 
         // flags are the second argument for open but the third for openat
-        let rule = SeccompRule::new(Sysno::open)
-            .and_condition(scmp_cmp!($arg1 & WRITECREATE == 0));
-        self.custom.entry(Sysno::open)
+        let rule = SeccompRule::new(Sysno::open).and_condition(scmp_cmp!($arg1 & WRITECREATE == 0));
+        self.custom
+            .entry(Sysno::open)
             .or_insert_with(Vec::new)
             .push(rule);
 
-        let rule = SeccompRule::new(Sysno::openat)
-            .and_condition(scmp_cmp!($arg2 & WRITECREATE == 0));
-        self.custom.entry(Sysno::openat)
+        let rule =
+            SeccompRule::new(Sysno::openat).and_condition(scmp_cmp!($arg2 & WRITECREATE == 0));
+        self.custom
+            .entry(Sysno::openat)
             .or_insert_with(Vec::new)
             .push(rule);
 
@@ -148,9 +169,9 @@ impl SystemIO {
     /// Allow reading from stdin
     #[must_use]
     pub fn allow_stdin(mut self) -> SystemIO {
-        let rule = SeccompRule::new(Sysno::read)
-            .and_condition(scmp_cmp!($arg0 == 0));
-        self.custom.entry(Sysno::read)
+        let rule = SeccompRule::new(Sysno::read).and_condition(scmp_cmp!($arg0 == 0));
+        self.custom
+            .entry(Sysno::read)
             .or_insert_with(Vec::new)
             .push(rule);
 
@@ -160,9 +181,9 @@ impl SystemIO {
     /// Allow writing to stdout
     #[must_use]
     pub fn allow_stdout(mut self) -> SystemIO {
-        let rule = SeccompRule::new(Sysno::write)
-            .and_condition(scmp_cmp!($arg0 == 1));
-        self.custom.entry(Sysno::write)
+        let rule = SeccompRule::new(Sysno::write).and_condition(scmp_cmp!($arg0 == 1));
+        self.custom
+            .entry(Sysno::write)
             .or_insert_with(Vec::new)
             .push(rule);
 
@@ -172,9 +193,9 @@ impl SystemIO {
     /// Allow writing to stderr
     #[must_use]
     pub fn allow_stderr(mut self) -> SystemIO {
-        let rule = SeccompRule::new(Sysno::write)
-            .and_condition(scmp_cmp!($arg0 == 2));
-        self.custom.entry(Sysno::write)
+        let rule = SeccompRule::new(Sysno::write).and_condition(scmp_cmp!($arg0 == 2));
+        self.custom
+            .entry(Sysno::write)
             .or_insert_with(Vec::new)
             .push(rule);
 
@@ -192,16 +213,20 @@ impl SystemIO {
     pub fn allow_file_read(mut self, file: &File) -> SystemIO {
         let fd = file.as_raw_fd();
         for &syscall in IO_READ_SYSCALLS {
-            let rule = SeccompRule::new(syscall)
-                .and_condition(scmp_cmp!($arg0 == fd.try_into().expect("fd provided was negative")));
-            self.custom.entry(syscall)
+            let rule = SeccompRule::new(syscall).and_condition(
+                scmp_cmp!($arg0 == fd.try_into().expect("fd provided was negative")),
+            );
+            self.custom
+                .entry(syscall)
                 .or_insert_with(Vec::new)
                 .push(rule);
         }
         for &syscall in IO_METADATA_SYSCALLS {
-            let rule = SeccompRule::new(syscall)
-                .and_condition(scmp_cmp!($arg0 == fd.try_into().expect("fd provided was negative")));
-            self.custom.entry(syscall)
+            let rule = SeccompRule::new(syscall).and_condition(
+                scmp_cmp!($arg0 == fd.try_into().expect("fd provided was negative")),
+            );
+            self.custom
+                .entry(syscall)
                 .or_insert_with(Vec::new)
                 .push(rule);
         }
@@ -221,7 +246,8 @@ impl SystemIO {
         let fd = file.as_raw_fd();
         let rule = SeccompRule::new(Sysno::write)
             .and_condition(scmp_cmp!($arg0 == fd.try_into().expect("fd provided was negative")));
-        self.custom.entry(Sysno::write)
+        self.custom
+            .entry(Sysno::write)
             .or_insert_with(Vec::new)
             .push(rule);
 

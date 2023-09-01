@@ -122,13 +122,10 @@ impl SafetyContext {
         let mut rules = rules.conditional_rules();
         for syscall in base_syscalls {
             let rule = SeccompRule::new(syscall);
-            rules.entry(syscall)
-                .or_insert_with(Vec::new)
-                .push(rule);
+            rules.entry(syscall).or_insert_with(Vec::new).push(rule);
         }
 
-        rules.into_values().flatten()
-            .collect()
+        rules.into_values().flatten().collect()
     }
 
     /// Enable the simple and conditional rules provided by the [`RuleSet`].
@@ -164,8 +161,7 @@ impl SafetyContext {
                             labeled_existing_rule.0,
                             labeled_new_rule.0,
                         ));
-                    }
-                    else if !new_is_simple && existing_is_simple {
+                    } else if !new_is_simple && existing_is_simple {
                         return Err(ExtraSafeError::ConditionalNoEffectError(
                             new_rule.syscall,
                             labeled_new_rule.0,
@@ -222,8 +218,7 @@ impl SafetyContext {
 
         if all_threads {
             ctx.set_filter_attr(ScmpFilterAttr::CtlTsync, 1)?;
-        }
-        else {
+        } else {
             // this is the default but we set it just to be sure.
             ctx.set_filter_attr(ScmpFilterAttr::CtlTsync, 0)?;
         }
@@ -236,8 +231,7 @@ impl SafetyContext {
         for LabeledSeccompRule(_origin, rule) in self.rules.into_values().flatten() {
             if rule.comparators.is_empty() {
                 ctx.add_rule(ScmpAction::Allow, rule.syscall.id())?;
-            }
-            else {
+            } else {
                 ctx.add_rule_conditional(ScmpAction::Allow, rule.syscall.id(), &rule.comparators)?;
             }
         }

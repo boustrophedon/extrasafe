@@ -87,12 +87,14 @@ fn main() {
     // we can enable safetycontext, rather than just waiting 50ms.
     thread::sleep(std::time::Duration::from_millis(50));
     SafetyContext::new()
-        .enable(Networking::nothing()
-            .allow_running_tcp_servers()
-            .allow_start_tcp_clients()
-        ).unwrap()
-        .enable(Threads::nothing()
-            .allow_create()).unwrap()
+        .enable(
+            Networking::nothing()
+                .allow_running_tcp_servers()
+                .allow_start_tcp_clients(),
+        )
+        .unwrap()
+        .enable(Threads::nothing().allow_create())
+        .unwrap()
         .apply_to_all_threads()
         .unwrap();
 
