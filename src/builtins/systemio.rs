@@ -21,6 +21,7 @@ const IO_METADATA_SYSCALLS: &[Sysno] = &[Sysno::stat, Sysno::fstat, Sysno::newfs
                                          Sysno::getdents, Sysno::getdents64,
                                          Sysno::getcwd];
 const IO_CLOSE_SYSCALLS: &[Sysno] = &[Sysno::close, Sysno::close_range];
+const IO_UNLINK_SYSCALLS: &[Sysno] = &[Sysno::unlink, Sysno::unlinkat];
 
 /// A [`RuleSet`] representing syscalls that perform IO - open/close/read/write/seek/stat.
 ///
@@ -50,6 +51,7 @@ impl SystemIO {
             .allow_write()
             .allow_open().yes_really()
             .allow_metadata()
+            .allow_unlink()
             .allow_close()
     }
 
@@ -67,6 +69,14 @@ impl SystemIO {
     #[must_use]
     pub fn allow_write(mut self) -> SystemIO {
         self.allowed.extend(IO_WRITE_SYSCALLS);
+
+        self
+    }
+
+    /// Allow `unlink` syscalls.
+    #[must_use]
+    pub fn allow_unlink(mut self) -> SystemIO {
+        self.allowed.extend(IO_UNLINK_SYSCALLS);
 
         self
     }
