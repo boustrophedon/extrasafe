@@ -1,6 +1,12 @@
 unreleased
 ----------
 
+- Switch seccomp backend to seccompiler
+  - This adds several new structs that act as wrappers around the underlying seccompiler structs
+  - Macros are defined in extrasafe now to replace the ones provided by
+    libseccomp for comparing and filtering syscall arguments
+- Add `#[must_use]` attributes to several structs
+
 0.2.0
 -----
 - reexport syscalls dependency

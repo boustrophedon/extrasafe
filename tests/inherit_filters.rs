@@ -40,6 +40,8 @@ fn new_process_inherits_restrictions() {
         .apply_to_current_thread()
         .unwrap();
 
+    // Note that this actually fails not because of the cat but because the new process is not even
+    // allowed to open ld or glibc
     let res = std::process::Command::new("cat")
         .arg("/proc/cpuinfo")
         .status();

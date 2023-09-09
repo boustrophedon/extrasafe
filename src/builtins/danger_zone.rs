@@ -2,7 +2,6 @@
 
 use std::collections::{HashMap, HashSet};
 
-//use libseccomp::scmp_cmp;
 use syscalls::Sysno;
 
 use crate::{SeccompRule, RuleSet};
@@ -62,13 +61,13 @@ impl RuleSet for Threads {
         // let mut rules = HashMap::new();
 
         // let clone = SeccompRule::new(Sysno::clone)
-        //     .and_condition(scmp_cmp!($arg2 & CLONE_THREAD == CLONE_THREAD));
+        //     .and_condition(seccomp_arg_filter!(arg2 & CLONE_THREAD == CLONE_THREAD));
         // rules.entry(Sysno::clone)
         //     .or_insert_with(Vec::new)
         //     .push(clone);
 
         // let clone3 = SeccompRule::new(Sysno::clone3)
-        //     .and_condition(scmp_cmp!($arg2 & CLONE_THREAD == CLONE_THREAD));
+        //     .and_condition(seccomp_arg_filter!(arg2 & CLONE_THREAD == CLONE_THREAD));
         // rules.entry(Sysno::clone3)
         //     .or_insert_with(Vec::new)
         //     .push(clone3);
@@ -91,12 +90,20 @@ impl RuleSet for Threads {
 pub struct ForkAndExec;
 impl RuleSet for ForkAndExec {
     fn simple_rules(&self) -> Vec<Sysno> {
-        vec![
+        let mut rules = vec![
              Sysno::fork, Sysno::vfork,
              Sysno::execve, Sysno::execveat,
              Sysno::wait4, Sysno::waitid,
              Sysno::clone, Sysno::clone3,
-        ]
+        ];
+
+        // musl creates a pipe when it starts a new process, and fails the operation if it can't
+        // create the pipe
+        if cfg!(target_env = "musl") {
+            rules.extend([Sysno::pipe, Sysno::pipe2]);
+        }
+
+        rules
     }
 
     fn conditional_rules(&self) -> HashMap<Sysno, Vec<SeccompRule>> {
@@ -105,13 +112,13 @@ impl RuleSet for ForkAndExec {
         // let mut custom = HashMap::new();
         //
         // let clone = SeccompRule::new(Sysno::clone)
-        //     .and_condition(scmp_cmp!($arg2 & CLONE_PARENT == CLONE_PARENT));
+        //     .and_condition(seccomp_arg_filter!(arg2 & CLONE_PARENT == CLONE_PARENT));
         // custom.entry(Sysno::clone)
         //     .or_insert_with(Vec::new)
         //     .push(clone);
 
         // let clone3 = SeccompRule::new(Sysno::clone3)
-        //     .and_condition(scmp_cmp!($arg2 & CLONE_PARENT == CLONE_PARENT));
+        //     .and_condition(seccomp_arg_filter!(arg2 & CLONE_PARENT == CLONE_PARENT));
         // custom.entry(Sysno::clone3)
         //     .or_insert_with(Vec::new)
         //     .push(clone3);

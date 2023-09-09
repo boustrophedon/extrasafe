@@ -27,7 +27,7 @@ fn main() {
 
 You've used safe and unsafe Rust: now your code can be extrasafe.
 
-extrasafe is a wrapper around [libseccomp](https://libseccomp.readthedocs.io/en/latest/), which uses [the Linux kernel's seccomp](https://www.kernel.org/doc/html/latest/userspace-api/seccomp_filter.html) syscall-filtering functionality to prevent your program from calling syscalls you don't need. Seccomp is used by systemd, Chrome, application sandboxes like bubblewrap and firejail, and container runtimes. Seccomp by itself is not a complete sandboxing system.
+extrasafe is a wrapper around [the Linux kernel's seccomp](https://www.kernel.org/doc/html/latest/userspace-api/seccomp_filter.html) syscall-filtering functionality to prevent your program from calling syscalls you don't need. Seccomp is used by systemd, Chrome, application sandboxes like bubblewrap and firejail, and container runtimes. Seccomp by itself is not a complete sandboxing system.
 
 The goal of extrasafe is to make it easy to add extra security to your own programs without having to rely on external configuration by the person running the software.
 

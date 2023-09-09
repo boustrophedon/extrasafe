@@ -302,6 +302,9 @@ fn main() {
     assert!(res3.is_ok(), "client3 failed: {:?}", res3.unwrap_err());
 }
 
+// This test fails on musl because the local libsqlite3.so is not compiled with musl, and linking a
+// glibc so into a musl program causes segfaults
+#[cfg(target_env = "gnu")]
 #[test]
 fn run_main() {
     main()
