@@ -22,9 +22,8 @@ fn simple_example() {
 }
 
 fn custom_ruleset() {
-    use extrasafe::{SeccompRule, RuleSet};
+    use extrasafe::*;
     use extrasafe::syscalls::Sysno;
-    use libseccomp::scmp_cmp;
 
     use std::collections::HashMap;
 
@@ -42,7 +41,7 @@ fn custom_ruleset() {
 
             let rule = SeccompRule::new(Sysno::socket)
                 .and_condition(
-                    scmp_cmp!($arg0 & SOCK_STREAM == SOCK_STREAM));
+                    seccomp_arg_filter!(arg0 & SOCK_STREAM == SOCK_STREAM));
             HashMap::from([
                 (Sysno::socket, vec![rule,])
             ])

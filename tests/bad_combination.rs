@@ -78,7 +78,7 @@ fn invalid_combination_new_conditional_different_name() {
 }
 
 #[test]
-/// Test that adding a conditional and simple rule in the same RuleSet produces an error
+/// Test that adding a conditional and simple rule in the same `RuleSet` produces an error
 fn invalid_combination_read_and_stdin() {
 
     let res = extrasafe::SafetyContext::new()
@@ -93,7 +93,7 @@ fn invalid_combination_read_and_stdin() {
 }
 
 #[test]
-/// Test that adding duplicate simple rules in the same RuleSet doesn't produce an error
+/// Test that adding duplicate simple rules in the same `RuleSet` doesn't produce an error
 fn not_invalid_combination_duplicate_simple() {
 
     let res = extrasafe::SafetyContext::new()
@@ -108,7 +108,7 @@ fn not_invalid_combination_duplicate_simple() {
 }
 
 #[test]
-/// Test that adding duplicate simple rules in the same RuleSet doesn't produce an error
+/// Test that adding duplicate simple rules in the same `RuleSet` doesn't produce an error
 fn not_invalid_combination_duplicate_simple2() {
 
     let res = extrasafe::SafetyContext::new()
@@ -124,7 +124,7 @@ fn not_invalid_combination_duplicate_simple2() {
 }
 
 #[test]
-/// Test that adding duplicate conditional rules in the same RuleSet doesn't produce an error
+/// Test that adding duplicate conditional rules in the same `RuleSet` doesn't produce an error
 fn not_invalid_combination_duplicate_conditional() {
 
     let res = extrasafe::SafetyContext::new()
@@ -139,7 +139,7 @@ fn not_invalid_combination_duplicate_conditional() {
 }
 
 #[test]
-/// Test that adding duplicate conditional rules in the same RuleSet doesn't produce an error
+/// Test that adding duplicate conditional rules from different `RuleSet`s doesn't produce an error
 fn not_invalid_combination_duplicate_conditional2() {
 
     let res = extrasafe::SafetyContext::new()

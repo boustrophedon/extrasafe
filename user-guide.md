@@ -90,8 +90,7 @@ If you want to use syscalls that aren't included in any of the builtin rulesets,
 In the meantime, you can create your own:
 
 ```rust
-use extrasafe::{SeccompRule, RuleSet};
-use libseccomp::scmp_cmp;
+use extrasafe::*;
 use syscalls::Sysno;
 
 use std::collections::HashMap;
@@ -110,7 +109,7 @@ impl RuleSet for MyRuleSet {
 
 		let rule = SeccompRule::new(Sysno::socket)
 			.and_condition(
-				scmp_cmp!($arg0 & SOCK_STREAM == SOCK_STREAM));
+				seccomp_arg_filter!(arg0 & SOCK_STREAM == SOCK_STREAM));
 		HashMap::from([
 			(Sysno::socket, vec![rule,])
 		])
@@ -127,7 +126,7 @@ extrasafe::SafetyContext::new()
 	.apply_to_current_thread().unwrap();
 ```
 
-See the [libseccomp rust bindings documentation](https://docs.rs/libseccomp/latest/libseccomp/macro.scmp_cmp.html) for more information on how to use the comparator generator macro.
+See the [extrasafe documentation](https://docs.rs/extrasafe/latest/macro.seccomp_arg_filter.html) for more information on how to use the comparator generator macro.
 
 Currently [the syscalls crate's](https://crates.io/crates/syscalls) [`Sysno` enum](https://docs.rs/syscalls/latest/syscalls/enum.Sysno.html) is used in the `RuleSet` interface. It's convenient because the enum is defined separately for each target architecture such that the syscall gets mapped to the correct syscall number (which may differ on different architectures).
 

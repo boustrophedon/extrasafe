@@ -1,3 +1,39 @@
+# New functionality
+
+## Other "sandboxing" features
+https://chromium.googlesource.com/chromium/src.git/+/HEAD/docs/linux/sandboxing.md#User-namespaces-sandbox
+
+User namespaces option? Something like:
+
+rust
+```
+SafetyContext::new()
+.isolate_process()
+``` 
+
+using unshare maybe? https://docs.kernel.org/userspace-api/unshare.html unshare is a bit tricky because e.g. newpid doesn't actually unshare the current thread, only its children. so maybe it would be better with a wrapper around creating a thread like ctx.run below.
+
+Maybe even a macro similar to tokio::main? is something like 
+
+```
+fn my_context() -> SafetyContext {
+}
+
+#[extrasafe::main(my_context)]
+fn main() {
+	foo();
+	//...
+}
+```
+
+possible? it should ideally also work transparently with tokio::main as well as long as you put it first
+
+see also https://blog.lizzie.io/linux-containers-in-500-loc.html
+
+## Simple mode
+
+Something either like "Network::everything()" (rather than Network::nothing etc) and "SystemIO::everything" or a separate wrapper over the existing RuleSet mechanism.
+
 # Nice to haves
 
 - more builtin profiles
@@ -32,35 +68,8 @@ see
 https://github.com/servo/gaol/
 and chrome?
 
-# New functionality
-https://chromium.googlesource.com/chromium/src.git/+/HEAD/docs/linux/sandboxing.md#User-namespaces-sandbox
-
-User namespaces option? Something like:
-
-rust
-```
-SafetyContext::new()
-.isolate_process()
-``` 
-
-see also https://blog.lizzie.io/linux-containers-in-500-loc.html
-
 # Remove all dependencies
 If you're using extrasafe to provide extra security, it then becomes a target for vulnerabilities, including supply-chain attacks.
-
-### libseccomp
-This is the hardest part to remove as we'd have to either rewrite the bpf generator, or record the output of libseccomp for our specific use-cases and commit it to the repository. For cases like allowing lists of fds to be read from/written to, we'd have to do some additional work to template the generated bpf code, which is essentially what libseccomp is already doing.
-
-There are actually two levels of dependencies here: [The Rust bindings](https://github.com/libseccomp-rs/libseccomp-rs) and [the actual C library](https://github.com/seccomp/libseccomp)
-
-maybe use the code from gaol?
-https://github.com/servo/gaol/
-https://github.com/servo/gaol/blob/4544946c5c922ee619a932ae5c3fd1d26f143384/platform/linux/seccomp.rs#L217
-
-also can consider seccompiler, which at least brings the code into pure rust
-and possibly gives us more flexibility on filtering syscall arguments, which is
-a weakness of libseccomp
-https://crates.io/crates/seccompiler
 
 ### syscalls
 Relatively easy to remove by copying directly into the repository, but comes with a maintenance burden of having to update the lists when new syscalls are created.

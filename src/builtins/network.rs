@@ -2,7 +2,6 @@
 
 use std::collections::{HashMap, HashSet};
 
-use libseccomp::scmp_cmp;
 use syscalls::Sysno;
 
 use super::YesReally;
@@ -104,15 +103,15 @@ impl Networking {
 
         // IPv4
         let rule = SeccompRule::new(Sysno::socket)
-            .and_condition(scmp_cmp!($arg0 & AF_INET == AF_INET))
-            .and_condition(scmp_cmp!($arg1 & SOCK_STREAM == SOCK_STREAM));
+            .and_condition(seccomp_arg_filter!(arg0 & AF_INET == AF_INET))
+            .and_condition(seccomp_arg_filter!(arg1 & SOCK_STREAM == SOCK_STREAM));
         self.custom.entry(Sysno::socket)
             .or_insert_with(Vec::new)
             .push(rule);
         // IPv6
         let rule = SeccompRule::new(Sysno::socket)
-            .and_condition(scmp_cmp!($arg0 & AF_INET6 == AF_INET6))
-            .and_condition(scmp_cmp!($arg1 & SOCK_STREAM == SOCK_STREAM));
+            .and_condition(seccomp_arg_filter!(arg0 & AF_INET6 == AF_INET6))
+            .and_condition(seccomp_arg_filter!(arg1 & SOCK_STREAM == SOCK_STREAM));
         self.custom.entry(Sysno::socket)
             .or_insert_with(Vec::new)
             .push(rule);
@@ -150,15 +149,15 @@ impl Networking {
 
         // IPv4
         let rule = SeccompRule::new(Sysno::socket)
-            .and_condition(scmp_cmp!($arg0 & AF_INET == AF_INET))
-            .and_condition(scmp_cmp!($arg1 & SOCK_DGRAM == SOCK_DGRAM));
+            .and_condition(seccomp_arg_filter!(arg0 & AF_INET == AF_INET))
+            .and_condition(seccomp_arg_filter!(arg1 & SOCK_DGRAM == SOCK_DGRAM));
         self.custom.entry(Sysno::socket)
             .or_insert_with(Vec::new)
             .push(rule);
         // IPv6
         let rule = SeccompRule::new(Sysno::socket)
-            .and_condition(scmp_cmp!($arg0 & AF_INET6 == AF_INET6))
-            .and_condition(scmp_cmp!($arg1 & SOCK_DGRAM == SOCK_DGRAM));
+            .and_condition(seccomp_arg_filter!(arg0 & AF_INET6 == AF_INET6))
+            .and_condition(seccomp_arg_filter!(arg1 & SOCK_DGRAM == SOCK_DGRAM));
         self.custom.entry(Sysno::socket)
             .or_insert_with(Vec::new)
             .push(rule);
@@ -194,15 +193,15 @@ impl Networking {
 
         // IPv4
         let rule = SeccompRule::new(Sysno::socket)
-            .and_condition(scmp_cmp!($arg0 & AF_INET == AF_INET))
-            .and_condition(scmp_cmp!($arg1 & SOCK_STREAM == SOCK_STREAM));
+            .and_condition(seccomp_arg_filter!(arg0 & AF_INET == AF_INET))
+            .and_condition(seccomp_arg_filter!(arg1 & SOCK_STREAM == SOCK_STREAM));
         self.custom.entry(Sysno::socket)
             .or_insert_with(Vec::new)
             .push(rule);
         // IPv6
         let rule = SeccompRule::new(Sysno::socket)
-            .and_condition(scmp_cmp!($arg0 & AF_INET6 == AF_INET6))
-            .and_condition(scmp_cmp!($arg1 & SOCK_STREAM == SOCK_STREAM));
+            .and_condition(seccomp_arg_filter!(arg0 & AF_INET6 == AF_INET6))
+            .and_condition(seccomp_arg_filter!(arg1 & SOCK_STREAM == SOCK_STREAM));
         self.custom.entry(Sysno::socket)
             .or_insert_with(Vec::new)
             .push(rule);
@@ -241,15 +240,15 @@ impl Networking {
 
         // We allow both stream and dgram unix sockets
         let rule = SeccompRule::new(Sysno::socket)
-            .and_condition(scmp_cmp!($arg0 & AF_UNIX == AF_UNIX))
-            .and_condition(scmp_cmp!($arg1 & SOCK_STREAM == SOCK_STREAM));
+            .and_condition(seccomp_arg_filter!(arg0 & AF_UNIX == AF_UNIX))
+            .and_condition(seccomp_arg_filter!(arg1 & SOCK_STREAM == SOCK_STREAM));
         self.custom.entry(Sysno::socket)
             .or_insert_with(Vec::new)
             .push(rule);
         // DGRAM
         let rule = SeccompRule::new(Sysno::socket)
-            .and_condition(scmp_cmp!($arg0 & AF_UNIX == AF_UNIX))
-            .and_condition(scmp_cmp!($arg1 & SOCK_DGRAM == SOCK_DGRAM));
+            .and_condition(seccomp_arg_filter!(arg0 & AF_UNIX == AF_UNIX))
+            .and_condition(seccomp_arg_filter!(arg1 & SOCK_DGRAM == SOCK_DGRAM));
         self.custom.entry(Sysno::socket)
             .or_insert_with(Vec::new)
             .push(rule);

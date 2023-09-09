@@ -4,7 +4,6 @@ use std::collections::{HashSet, HashMap};
 use std::fs::File;
 use std::os::unix::io::AsRawFd;
 
-use libseccomp::*;
 use syscalls::Sysno;
 
 use crate::{RuleSet, SeccompRule};
@@ -111,13 +110,13 @@ impl SystemIO {
 
         // flags are the second argument for open but the third for openat
         let rule = SeccompRule::new(Sysno::open)
-            .and_condition(scmp_cmp!($arg1 & WRITECREATE == 0));
+            .and_condition(seccomp_arg_filter!(arg1 & WRITECREATE == 0));
         self.custom.entry(Sysno::open)
             .or_insert_with(Vec::new)
             .push(rule);
 
         let rule = SeccompRule::new(Sysno::openat)
-            .and_condition(scmp_cmp!($arg2 & WRITECREATE == 0));
+            .and_condition(seccomp_arg_filter!(arg2 & WRITECREATE == 0));
         self.custom.entry(Sysno::openat)
             .or_insert_with(Vec::new)
             .push(rule);
@@ -149,7 +148,7 @@ impl SystemIO {
     /// Allow reading from stdin
     pub fn allow_stdin(mut self) -> SystemIO {
         let rule = SeccompRule::new(Sysno::read)
-            .and_condition(scmp_cmp!($arg0 == 0));
+            .and_condition(seccomp_arg_filter!(arg0 == 0));
         self.custom.entry(Sysno::read)
             .or_insert_with(Vec::new)
             .push(rule);
@@ -160,7 +159,7 @@ impl SystemIO {
     /// Allow writing to stdout
     pub fn allow_stdout(mut self) -> SystemIO {
         let rule = SeccompRule::new(Sysno::write)
-            .and_condition(scmp_cmp!($arg0 == 1));
+            .and_condition(seccomp_arg_filter!(arg0 == 1));
         self.custom.entry(Sysno::write)
             .or_insert_with(Vec::new)
             .push(rule);
@@ -171,7 +170,7 @@ impl SystemIO {
     /// Allow writing to stderr
     pub fn allow_stderr(mut self) -> SystemIO {
         let rule = SeccompRule::new(Sysno::write)
-            .and_condition(scmp_cmp!($arg0 == 2));
+            .and_condition(seccomp_arg_filter!(arg0 == 2));
         self.custom.entry(Sysno::write)
             .or_insert_with(Vec::new)
             .push(rule);
@@ -188,17 +187,17 @@ impl SystemIO {
     /// it's possible that the fd will be reused and therefore may be read from.
     #[allow(clippy::missing_panics_doc)]
     pub fn allow_file_read(mut self, file: &File) -> SystemIO {
-        let fd = file.as_raw_fd();
+        let fd = file.as_raw_fd().try_into().expect("provided fd was negative");
         for &syscall in IO_READ_SYSCALLS {
             let rule = SeccompRule::new(syscall)
-                .and_condition(scmp_cmp!($arg0 == fd.try_into().expect("fd provided was negative")));
+                .and_condition(seccomp_arg_filter!(arg0 == fd));
             self.custom.entry(syscall)
                 .or_insert_with(Vec::new)
                 .push(rule);
         }
         for &syscall in IO_METADATA_SYSCALLS {
             let rule = SeccompRule::new(syscall)
-                .and_condition(scmp_cmp!($arg0 == fd.try_into().expect("fd provided was negative")));
+                .and_condition(seccomp_arg_filter!(arg0 == fd));
             self.custom.entry(syscall)
                 .or_insert_with(Vec::new)
                 .push(rule);
@@ -216,9 +215,9 @@ impl SystemIO {
     /// it's possible that the fd will be reused and therefore may be written to.
     #[allow(clippy::missing_panics_doc)]
     pub fn allow_file_write(mut self, file: &File) -> SystemIO {
-        let fd = file.as_raw_fd();
+        let fd = file.as_raw_fd().try_into().expect("provided fd was negative");
         let rule = SeccompRule::new(Sysno::write)
-            .and_condition(scmp_cmp!($arg0 == fd.try_into().expect("fd provided was negative")));
+            .and_condition(seccomp_arg_filter!(arg0 == fd));
         self.custom.entry(Sysno::write)
             .or_insert_with(Vec::new)
             .push(rule);

@@ -10,14 +10,13 @@ This is the entry point. You create a SafetyContext, in which you gather rules v
 - RuleSet
 A trait that provides a collection of simple and conditional rules. You can think of this as a facet of a security policy, like allowing IO, network, or clock access. There are implementors provided by extrasafe and you can also define your own.
 - SeccompRule
-A syscall and an optional number of conditions on the syscall's arguments. You can make comparisons on the arguments of the syscall, but the conditions can't dereference pointers so you can't do e.g. string comparisons on file paths.
+A syscall and an optional number of conditions (`SeccompArgumentFilter`s) on the syscall's arguments. You can make comparisons on the arguments of the syscall, but the conditions can't dereference pointers so you can't do e.g. string comparisons on file paths.
 
 The comparisons are such that when the comparison returns **true**, the syscall is allowed.
 
-A single SeccompRule may contain multiple conditions, which are anded together by libseccomp, that is, they all must be true for the syscall to be allowed. If multiple rules are loaded, the syscall is allowed if any of the rules allow it.
+A single SeccompRule may contain multiple conditions, which are anded together by seccompiler, that is, they all must be true for the syscall to be allowed. If multiple rules are loaded for a single syscall, the syscall is allowed if any of the rules allow it.
 
-
-One thing to note is that libseccomp will silently override conditional rules on a syscall if an unconditional one is added (in the context of extrasafe, where all filters are allow-based). extrasafe catches this and provides an error with the conflicting syscall and the names of the RuleSets that provided the rules.
+That is, the argument filters within a SeccompRule are and-ed together, but the SeccompRules themselves are or-ed together.
 
 # Typical usage
 
@@ -30,7 +29,7 @@ DNS requires accessing /etc/resolv.conf and ssl typically requires opening a bun
 
 ### Network calls
 
-TODO: tcp sockets and accept, tcp clients opening connections
+TODO: see tests/examples, describe tcp sockets and accept, tcp clients opening connections
 
 ### Threads vs processes and IPC
 TODO, threads don't give as much isolation as processes due to sharing namespace, fds, environment variables, etc.

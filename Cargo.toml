@@ -10,7 +10,7 @@ keywords = ["security", "seccomp", "syscall"]
 categories = ["os::linux-apis"]
 
 [dependencies]
-libseccomp = "^0.3"
+seccompiler = { version = "^0.4", default-features = false }
 libc = "^0.2"
 syscalls = { version = "^0.6", default-features = false }
 
@@ -23,5 +23,5 @@ tempfile = "^3"
 tokio = "^1.15"
 hyper = { version = "^0.14", features = ["http1", "server", "runtime", "tcp"] }
 warp = "^0.3"
-reqwest = "^0.11"
+reqwest = { version = "^0.11", default-features = false, features = ["rustls-tls"] }
 rusqlite = "^0.26"
