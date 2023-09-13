@@ -154,6 +154,8 @@ fn run_db(socket_path: &str) {
     // after opening connection socket and db file, set extrasafe context
     SafetyContext::new()
         .enable(Networking::nothing()
+            .allow_connect()
+            .yes_really()
             .allow_running_unix_servers()
         ).unwrap()
         .enable(SystemIO::nothing()

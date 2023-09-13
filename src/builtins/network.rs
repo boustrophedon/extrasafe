@@ -175,6 +175,16 @@ impl Networking {
         YesReally::new(self)
     }
 
+    /// Allow `connect` syscall
+    ///
+    /// # Security Considerations
+    ///
+    /// This allows connnecting to a potentially dangerous network resource
+    pub fn allow_connect(mut self) -> YesReally<Networking> {
+        self.allowed.extend(&[Sysno::connect]);
+        YesReally::new(self)
+    }
+
     /// Allow starting new TCP clients.
     ///
     /// # Security Notes
@@ -201,7 +211,7 @@ impl Networking {
         self.custom.entry(Sysno::socket)
             .or_insert_with(Vec::new)
             .push(rule);
-
+        
         self.allowed.extend(&[Sysno::connect]);
         self.allowed.extend(NET_IO_SYSCALLS);
         self.allowed.extend(NET_READ_SYSCALLS);
