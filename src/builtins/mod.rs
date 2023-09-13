@@ -36,3 +36,4 @@ pub mod time;
 pub use time::Time;
 
 pub mod danger_zone;
+pub mod pipes;
