@@ -26,6 +26,7 @@ const IO_UNLINK_SYSCALLS: &[Sysno] = &[Sysno::unlink, Sysno::unlinkat];
 /// A [`RuleSet`] representing syscalls that perform IO - open/close/read/write/seek/stat.
 ///
 /// Configurable to allow subsets of IO syscalls and specific fds.
+#[must_use]
 pub struct SystemIO {
     /// Syscalls that are allowed
     allowed: HashSet<Sysno>,
@@ -35,7 +36,6 @@ pub struct SystemIO {
 
 impl SystemIO {
     /// By default, allow no IO syscalls.
-    #[must_use]
     pub fn nothing() -> SystemIO {
         SystemIO {
             allowed: HashSet::new(),
@@ -44,7 +44,6 @@ impl SystemIO {
     }
 
     /// Allow all IO syscalls.
-    #[must_use]
     pub fn everything() -> SystemIO {
         SystemIO::nothing()
             .allow_read()
@@ -58,7 +57,6 @@ impl SystemIO {
 
 
     /// Allow `read` syscalls.
-    #[must_use]
     pub fn allow_read(mut self) -> SystemIO {
         self.allowed.extend(IO_READ_SYSCALLS);
 
@@ -66,7 +64,6 @@ impl SystemIO {
     }
 
     /// Allow `write` syscalls.
-    #[must_use]
     pub fn allow_write(mut self) -> SystemIO {
         self.allowed.extend(IO_WRITE_SYSCALLS);
 
@@ -74,7 +71,6 @@ impl SystemIO {
     }
 
     /// Allow `unlink` syscalls.
-    #[must_use]
     pub fn allow_unlink(mut self) -> SystemIO {
         self.allowed.extend(IO_UNLINK_SYSCALLS);
 
@@ -88,7 +84,6 @@ impl SystemIO {
     /// The reason this function returns a [`YesReally`] is because it's easy to accidentally combine
     /// it with another ruleset that allows `write` - for example the Network ruleset - even if you
     /// only want to read files. Consider using `allow_open_directories()` or `allow_open_files()`.
-    #[must_use]
     pub fn allow_open(mut self) -> YesReally<SystemIO> {
         self.allowed.extend(IO_OPEN_SYSCALLS);
 
@@ -100,7 +95,6 @@ impl SystemIO {
     /// Note that the `openat2` syscall (which is not exposed by glibc anyway according to the
     /// syscall manpage, and so probably isn't very common) is not supported here because it has a
     /// separate configuration struct instead of a flag bitset.
-    #[must_use]
     pub fn allow_open_readonly(mut self) -> SystemIO {
         const O_WRONLY: u64 = libc::O_WRONLY as u64;
         const O_RDWR: u64 = libc::O_RDWR as u64;
@@ -132,7 +126,6 @@ impl SystemIO {
     }
 
     /// Allow `stat` syscalls.
-    #[must_use]
     pub fn allow_metadata(mut self) -> SystemIO {
         self.allowed.extend(IO_METADATA_SYSCALLS);
 
@@ -140,7 +133,6 @@ impl SystemIO {
     }
 
     /// Allow `ioctl` and `fcntl` syscalls.
-    #[must_use]
     pub fn allow_ioctl(mut self) -> SystemIO {
         self.allowed.extend(IO_IOCTL_SYSCALLS);
 
@@ -148,7 +140,6 @@ impl SystemIO {
     }
 
     /// Allow `close` syscalls.
-    #[must_use]
     pub fn allow_close(mut self) -> SystemIO {
         self.allowed.extend(IO_CLOSE_SYSCALLS);
 
@@ -156,7 +147,6 @@ impl SystemIO {
     }
 
     /// Allow reading from stdin
-    #[must_use]
     pub fn allow_stdin(mut self) -> SystemIO {
         let rule = SeccompRule::new(Sysno::read)
             .and_condition(scmp_cmp!($arg0 == 0));
@@ -168,7 +158,6 @@ impl SystemIO {
     }
 
     /// Allow writing to stdout
-    #[must_use]
     pub fn allow_stdout(mut self) -> SystemIO {
         let rule = SeccompRule::new(Sysno::write)
             .and_condition(scmp_cmp!($arg0 == 1));
@@ -180,7 +169,6 @@ impl SystemIO {
     }
 
     /// Allow writing to stderr
-    #[must_use]
     pub fn allow_stderr(mut self) -> SystemIO {
         let rule = SeccompRule::new(Sysno::write)
             .and_condition(scmp_cmp!($arg0 == 2));
@@ -198,7 +186,7 @@ impl SystemIO {
     ///
     /// If another file or socket is opened after the file provided to this function is closed,
     /// it's possible that the fd will be reused and therefore may be read from.
-    #[must_use]
+    #[allow(clippy::missing_panics_doc)]
     pub fn allow_file_read(mut self, file: &File) -> SystemIO {
         let fd = file.as_raw_fd();
         for &syscall in IO_READ_SYSCALLS {
@@ -226,7 +214,7 @@ impl SystemIO {
     ///
     /// If another file or socket is opened after the file provided to this function is closed,
     /// it's possible that the fd will be reused and therefore may be written to.
-    #[must_use]
+    #[allow(clippy::missing_panics_doc)]
     pub fn allow_file_write(mut self, file: &File) -> SystemIO {
         let fd = file.as_raw_fd();
         let rule = SeccompRule::new(Sysno::write)

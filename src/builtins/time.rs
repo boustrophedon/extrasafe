@@ -7,6 +7,7 @@ use syscalls::Sysno;
 
 use crate::{SeccompRule, RuleSet};
 
+#[must_use]
 /// Enable syscalls related to time.
 pub struct Time {
     /// Syscalls that are allowed
@@ -15,7 +16,6 @@ pub struct Time {
 
 impl Time {
     /// Create a new Time [`RuleSet`] with nothing allowed by default.
-    #[must_use]
     pub fn nothing() -> Time {
         Time {
             allowed: HashSet::new(),
@@ -26,7 +26,6 @@ impl Time {
 /// [`vDSO`](https://man7.org/linux/man-pages/man7/vdso.7.html) to compute the time directly with
 /// rdtsc rather than calling the `clock_gettime` syscall, so in most cases you don't need to
 /// actually enable this.
-    #[must_use]
     pub fn allow_gettime(mut self) -> Time {
         self.allowed
             .extend([Sysno::clock_gettime, Sysno::clock_getres]);
