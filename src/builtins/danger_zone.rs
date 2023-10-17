@@ -20,13 +20,13 @@ use super::YesReally;
 /// do not provide isolation from each other. You can still access other threads' memory and
 /// potentially get them to do operations that are not allowed in the current thread's seccomp
 /// context.
+#[must_use]
 pub struct Threads {
     allowed: HashSet<Sysno>,
 }
 
 impl Threads {
     /// Create a new [`Threads`] ruleset with nothing allowed by default.
-    #[must_use]
     pub fn nothing() -> Threads {
         Threads {
             allowed: HashSet::new(),
@@ -34,7 +34,6 @@ impl Threads {
     }
 
     /// Allow creating new threads and processes.
-    #[must_use]
     pub fn allow_create(mut self) -> Threads {
         self.allowed.extend([Sysno::clone, Sysno::clone3]);
 
@@ -46,7 +45,6 @@ impl Threads {
     /// # Security considerations
     /// An attacker with arbitrary code execution and access to a high resolution timer can mount
     /// timing attacks (e.g. spectre).
-    #[must_use]
     pub fn allow_sleep(mut self) -> YesReally<Threads> {
         self.allowed
             .extend([Sysno::clock_nanosleep, Sysno::nanosleep]);
@@ -89,6 +87,7 @@ impl RuleSet for Threads {
 /// `tests/inherit_filters.rs`) but depending on your filter it could still do bad things.
 ///
 /// Note that this also allows the `clone` syscall.
+#[must_use]
 pub struct ForkAndExec;
 impl RuleSet for ForkAndExec {
     fn simple_rules(&self) -> Vec<Sysno> {

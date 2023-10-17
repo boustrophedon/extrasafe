@@ -63,6 +63,7 @@ const NET_WRITE_SYSCALLS: &[Sysno] = &[Sysno::sendto, Sysno::sendmsg, Sysno::sen
 /// care to consider whether you can split up your program (e.g. across separate threads) into a
 /// part that opens and writes to files and a part that speaks to the network. This is a good
 /// security practice in general.
+#[must_use]
 pub struct Networking {
     /// Syscalls that are allowed
     allowed: HashSet<Sysno>,
@@ -72,7 +73,6 @@ pub struct Networking {
 
 impl Networking {
     /// By default, allow no networking syscalls.
-    #[must_use]
     pub fn nothing() -> Networking {
         Networking {
             allowed: HashSet::new(),
@@ -82,7 +82,6 @@ impl Networking {
 
     /// Allow a running TCP server to continue running. Does not allow `socket` or `bind`,
     /// preventing new sockets from being created.
-    #[must_use]
     pub fn allow_running_tcp_servers(mut self) -> Networking {
         self.allowed.extend(NET_IO_SYSCALLS);
         self.allowed.extend(NET_READ_SYSCALLS);
@@ -98,7 +97,6 @@ impl Networking {
     /// You probably don't need to use this. In most cases you can just run your server and then
     /// use [`allow_running_tcp_servers`](Self::allow_running_tcp_servers). See
     /// `examples/network_server.rs` for an example with warp.
-    #[must_use]
     pub fn allow_start_tcp_servers(mut self) -> YesReally<Networking> {
         const AF_INET: u64 = libc::AF_INET as u64;
         const AF_INET6: u64 = libc::AF_INET6 as u64;
@@ -131,7 +129,6 @@ impl Networking {
 
     /// Allow a running UDP socket to continue running. Does not allow `socket` or `bind`,
     /// preventing new sockets from being created.
-    #[must_use]
     pub fn allow_running_udp_sockets(mut self) -> Networking {
         self.allowed.extend(NET_IO_SYSCALLS);
         self.allowed.extend(NET_READ_SYSCALLS);
@@ -146,7 +143,6 @@ impl Networking {
     ///
     /// You probably don't need to use this. In most cases you can just run your server and then
     /// use [`allow_running_udp_sockets`](Self::allow_running_udp_sockets).
-    #[must_use]
     pub fn allow_start_udp_servers(mut self) -> YesReally<Networking> {
         const AF_INET: u64 = libc::AF_INET as u64;
         const AF_INET6: u64 = libc::AF_INET6 as u64;
@@ -191,7 +187,6 @@ impl Networking {
     ///
     /// In some cases you can create the socket ahead of time, but that isn't possible with e.g.
     /// reqwest, so we allow socket but not bind here.
-    #[must_use]
     pub fn allow_start_tcp_clients(mut self) -> Networking {
         const AF_INET: u64 = libc::AF_INET as u64;
         const AF_INET6: u64 = libc::AF_INET6 as u64;
@@ -225,7 +220,6 @@ impl Networking {
     ///
     /// This is technically the same as
     /// [`allow_running_tcp_servers`](Self::allow_running_tcp_servers).
-    #[must_use]
     pub fn allow_running_tcp_clients(mut self) -> Networking {
         self.allowed.extend(NET_IO_SYSCALLS);
         self.allowed.extend(NET_READ_SYSCALLS);
@@ -240,7 +234,6 @@ impl Networking {
     ///
     /// You probably don't need to use this. In most cases you can just run your server and then
     /// use [`allow_running_unix_servers`](Self::allow_running_unix_servers).
-    #[must_use]
     pub fn allow_start_unix_servers(mut self) -> YesReally<Networking> {
         const AF_UNIX: u64 = libc::AF_UNIX as u64;
         const SOCK_STREAM: u64 = libc::SOCK_STREAM as u64;
@@ -271,7 +264,6 @@ impl Networking {
 
     /// Allow a running Unix server to continue running. Does not allow `socket` or `bind`,
     /// preventing new sockets from being created.
-    #[must_use]
     pub fn allow_running_unix_servers(mut self) -> Networking {
         self.allowed.extend(NET_IO_SYSCALLS);
         self.allowed.extend(NET_READ_SYSCALLS);
@@ -285,7 +277,6 @@ impl Networking {
     ///
     /// This is technically the same as
     /// [`allow_running_unix_servers`](Self::allow_running_unix_servers).
-    #[must_use]
     pub fn allow_running_unix_clients(mut self) -> Networking {
         self.allowed.extend(NET_IO_SYSCALLS);
         self.allowed.extend(NET_READ_SYSCALLS);

@@ -1,9 +1,10 @@
 #![deny(non_ascii_idents)]
 #![deny(unsafe_code)]
 #![deny(unused_results)]
+#![allow(clippy::unwrap_or_default)] // explicit is better than implicit
 #![allow(clippy::new_without_default)]
 // Denied in CI
-//#![warn(missing_docs)]
+#![warn(missing_docs)]
 #![warn(trivial_casts, trivial_numeric_casts)]
 
 //! extrasafe is a library that makes it easy to improve your program's security by selectively
@@ -22,6 +23,7 @@ use std::collections::HashMap;
 use std::fmt;
 
 #[derive(Debug, Clone)]
+#[must_use]
 /// A seccomp rule.
 pub struct SeccompRule {
     /// The syscall being filtered
@@ -34,7 +36,6 @@ pub struct SeccompRule {
 
 impl SeccompRule {
     /// Constructs a new [`SeccompRule`] that unconditionally allows the given syscall.
-    #[must_use]
     pub fn new(syscall: syscalls::Sysno) -> SeccompRule {
         SeccompRule {
             syscall,
@@ -44,7 +45,6 @@ impl SeccompRule {
 
     /// Adds a condition to the [`SeccompRule`] which must evaluate to true in order for the syscall to be
     /// allowed.
-    #[must_use]
     pub fn and_condition(mut self, comparator: ScmpArgCompare) -> SeccompRule {
         self.comparators.push(comparator);
 
