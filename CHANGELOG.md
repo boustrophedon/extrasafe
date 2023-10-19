@@ -1,11 +1,17 @@
-unreleased
-----------
-
+0.3.0
+-----
 - Switch seccomp backend to seccompiler
-  - This adds several new structs that act as wrappers around the underlying seccompiler structs
+  - This adds several new structs that act as wrappers around the underlying
+    seccompiler structs
   - Macros are defined in extrasafe now to replace the ones provided by
     libseccomp for comparing and filtering syscall arguments
-- Add `#[must_use]` attributes to several structs
+- Add `#[must_use]` attributes to several structs where it was previously only
+  on methods that returned that struct
+- Add Pipes builtin ruleset
+- Allow `connect` syscall in dedicated method in Network builtin ruleset
+- On musl, the ForkAndExec ruleset for starting new processes additionally
+  allows the pipe and pipe2 syscalls, which it appears to use for
+  synchronization purposes
 
 0.2.0
 -----
