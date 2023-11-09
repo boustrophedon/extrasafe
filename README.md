@@ -42,29 +42,27 @@ We also support using Landlock to allow specific, targetted access to the filesy
 
 ```rust
 fn main() {
-    let tmp_dir_allow = tempfile::tempdir().unwrap().into_path();
-    let tmp_dir_deny = tempfile::tempdir().unwrap().into_path();
+    let tmp_dir = tempfile::tempdir().unwrap().into_path();
 
     extrasafe::SafetyContext::new()
         .enable(
            extrasafe::builtins::SystemIO::nothing()
-              .allow_create_in_dir(&tmp_dir_allow)
-              .allow_write_file(&tmp_dir_allow)
+              .allow_create_in_dir(&tmp_dir)
+              .allow_write_file(&tmp_dir)
         ).unwrap()
 	.apply_to_current_thread().unwrap();
 
     // Opening arbitrary files now fails!
-    assert!(File::create(tmp_dir_deny.join("evil.txt"))
+    assert!(File::open("/etc/passwd")
         .is_err());
 
     // But the directory we allowed works
-    assert!(File::create(tmp_dir_allow.join("my_output.txt"))
+    assert!(File::create(tmp_dir.join("my_output.txt"))
         .is_ok());
 
     // And other syscalls are still disallowed
     assert!(std::net::UdpSocket::bind("127.0.0.1:0")
         .is_err());
-}
 }
 ```
 
