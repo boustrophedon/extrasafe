@@ -141,9 +141,11 @@ However, there are some syscalls that only exist on certain architectures (e.g. 
 
 # Landlock
 
-If the crate feature "landlock" is active, and a SafetyContext enables a RuleSet that provides a non-empty Vec from its `landlock_rules` method, Landlock will be enabled. Landlock can be applied independently of seccomp by using the `SafetyContext::landlock_only()` before applying the context to the current thread.
-
 Landlock allows you to restrict access to the filesystem via a variety of [access rights](https://www.kernel.org/doc/html/latest/userspace-api/landlock.html#access-rights). These access rights are applied either to existing files, or on existing directories, in which case the right will apply to all subdirectories and subfiles.
+
+Extrasafe currently requires V2 of the landlock ABI, which was introduced in Linux kernel 5.19.
+
+If the crate feature "landlock" is active, and a SafetyContext enables a RuleSet that provides a non-empty Vec from its `landlock_rules` method, Landlock will be enabled. Landlock can be applied independently of seccomp by using the `SafetyContext::landlock_only()` before applying the context to the current thread.
 
 The easiest way to use Landlock is via the SystemIO ruleset, which provides methods like `allow_create_in_dir`, `allow_read_path`, and `allow_write_file`.
 
