@@ -12,10 +12,6 @@ impl RuleSet for Pipes {
         vec![Sysno::pipe, Sysno::pipe2]
     }
 
-    fn conditional_rules(&self) -> HashMap<Sysno, Vec<SeccompRule>> {
-        HashMap::new()
-    }
-
     fn name(&self) -> &'static str {
         "Pipes"
     }

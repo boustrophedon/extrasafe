@@ -71,10 +71,6 @@ impl RuleSet for BasicCapabilities {
         ]
     }
 
-    fn conditional_rules(&self) -> HashMap<Sysno, Vec<SeccompRule>> {
-        HashMap::new()
-    }
-
     fn name(&self) -> &'static str {
         "BasicCapabilities"
     }
