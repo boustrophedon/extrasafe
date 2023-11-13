@@ -39,12 +39,7 @@ impl RuleSet for Time {
         self.allowed.iter().copied().collect()
     }
 
-    fn conditional_rules(&self) -> HashMap<Sysno, Vec<SeccompRule>> {
-        HashMap::new()
-    }
-
     fn name(&self) -> &'static str {
         "Time"
     }
 }
-

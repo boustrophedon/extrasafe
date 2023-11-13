@@ -184,7 +184,9 @@ pub trait RuleSet {
 
     /// A conditional rule is a seccomp rule that uses a condition to restrict the syscall, e.g. only
     /// specific flags as parameters.
-    fn conditional_rules(&self) -> HashMap<syscalls::Sysno, Vec<SeccompRule>>;
+    fn conditional_rules(&self) -> HashMap<syscalls::Sysno, Vec<SeccompRule>> {
+        HashMap::new()
+    }
 
     /// The name of the profile.
     fn name(&self) -> &'static str;

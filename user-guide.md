@@ -14,25 +14,25 @@ Enable some `RuleSet`s, which are essentially named collections of syscalls grou
 use extrasafe::builtins::{SystemIO, Networking};
 
 let ctx = ctx
-	.enable(
-		SystemIO::nothing()
-			.allow_open_readonly()
-		).expect("Failed to add systemio ruleset to context")
-		// The Networking RuleSet includes both read and write, but our files
-		// will be opened readonly so we can't actually write to them.
-		// We can still write to stdout and stderr though.
-	.enable(
-		Networking::nothing()
-			.allow_start_tcp_clients()
-			.allow_running_tcp_clients()
-		).expect("Failed to add networking ruleset to context");
+    .enable(
+        SystemIO::nothing()
+            .allow_open_readonly()
+        ).expect("Failed to add systemio ruleset to context")
+        // The Networking RuleSet includes both read and write, but our files
+        // will be opened readonly so we can't actually write to them.
+        // We can still write to stdout and stderr though.
+    .enable(
+        Networking::nothing()
+            .allow_start_tcp_clients()
+            .allow_running_tcp_clients()
+        ).expect("Failed to add networking ruleset to context");
 ```
 
 And then finally apply the rules to the current thread, or all threads, with `apply_to_current_thread` or `apply_to_all_threads`.
 
 ```rust
 ctx.apply_to_current_thread()
-	.expect("Failed to apply seccomp filters");
+    .expect("Failed to apply seccomp filters");
 ```
 
 now trying to create a file for writing will fail:
@@ -56,7 +56,9 @@ pub trait RuleSet {
 
     /// A conditional rule is a seccomp rule that uses a condition to restrict the syscall, e.g. only
     /// specific flags as parameters.
-    fn conditional_rules(&self) -> HashMap<syscalls::Sysno, Vec<SeccompRule>>;
+    fn conditional_rules(&self) -> HashMap<syscalls::Sysno, Vec<SeccompRule>> {
+      HashMap::new()
+    }
 
     /// The name of the profile.
     fn name(&self) -> &'static str;
@@ -71,6 +73,7 @@ pub trait RuleSet {
 ```
 
 The RuleSet is comprised of
+
 - A list of "simple rules", which enables the syscall without restriction
 - A map of syscalls to a list of "Rules", which are pairs of a syscall and conditions on its arguments.
 - The name of the RuleSet, for error message reporting purposes
@@ -79,12 +82,12 @@ The RuleSet is comprised of
 There are a few restrictions to note about `RuleSet`s that originate in seccomp:
 
 ### Overlapping rules
+
 Extrasafe starts from a default-deny state, and each time you `enable` a RuleSet, the SafetyContext gathers all the rules and adds them to its context (hence the name). Because we can only enable (i.e. the process is additive), enabling will fail if one `RuleSet` enables a syscall without restriction (via `simple_rules`), and another enables a syscall with a restriction (via `conditional_rules`). If it did not, the restriction would be silently ignored by seccomp when the filter is instantiated, which can be confusing.
 
 One thing this impacts is where syscalls are used in multiple contexts, particularly the `read` and `write` syscalls: If you restrict the fds you can call `read` on, intending to limit access to the filesystem, you may also intentionally block yourself from `read`ing from a socket.
 
-In order to get around this issue, you can do all your filesystem operations on one thread/process and your network operations in another, and communicate via e.g. a unix domain socket. See [examples/ipc\_server\_with\_database.rs](https://github.com/boustrophedon/extrasafe/blob/master/examples/ipc_server_with_database.rs) for an example of using communicating processes to achieve this separation. 
-
+In order to get around this issue, you can do all your filesystem operations on one thread/process and your network operations in another, and communicate via e.g. a unix domain socket. See [examples/ipc\_server\_with\_database.rs](https://github.com/boustrophedon/extrasafe/blob/master/examples/ipc_server_with_database.rs) for an example of using communicating processes to achieve this separation.
 
 ### Syscall pointer arguments
 
@@ -105,32 +108,32 @@ use std::collections::HashMap;
 struct MyRuleSet;
 
 impl RuleSet for MyRuleSet {
-	fn simple_rules(&self) -> Vec<Sysno> {
-		// literally reboot the computer
-		vec![Sysno::reboot]
-	}
+    fn simple_rules(&self) -> Vec<Sysno> {
+        // literally reboot the computer
+        vec![Sysno::reboot]
+    }
 
-	fn conditional_rules(&self) -> HashMap<Sysno, Vec<SeccompRule>> {
-		// Only allow the creation of stream (tcp) sockets
-		const SOCK_STREAM: u64 = libc::SOCK_STREAM as u64;
+    fn conditional_rules(&self) -> HashMap<Sysno, Vec<SeccompRule>> {
+        // Only allow the creation of stream (tcp) sockets
+        const SOCK_STREAM: u64 = libc::SOCK_STREAM as u64;
 
-		let rule = SeccompRule::new(Sysno::socket)
-			.and_condition(
-				seccomp_arg_filter!(arg0 & SOCK_STREAM == SOCK_STREAM));
-		HashMap::from([
-			(Sysno::socket, vec![rule,])
-		])
-	}
+        let rule = SeccompRule::new(Sysno::socket)
+            .and_condition(
+                seccomp_arg_filter!(arg0 & SOCK_STREAM == SOCK_STREAM));
+        HashMap::from([
+            (Sysno::socket, vec![rule,])
+        ])
+    }
 
-	fn name(&self) -> &'static str {
-		"MyRuleSet"
-	}
+    fn name(&self) -> &'static str {
+        "MyRuleSet"
+    }
 }
 
 // And it can be enabled just like the builtin ones:
 extrasafe::SafetyContext::new()
-	.enable(MyRuleSet).unwrap()
-	.apply_to_current_thread().unwrap();
+    .enable(MyRuleSet).unwrap()
+    .apply_to_current_thread().unwrap();
 ```
 
 See the [extrasafe documentation](https://docs.rs/extrasafe/latest/macro.seccomp_arg_filter.html) for more information on how to use the comparator generator macro.
@@ -139,7 +142,7 @@ Currently [the syscalls crate's](https://crates.io/crates/syscalls) [`Sysno` enu
 
 However, there are some syscalls that only exist on certain architectures (e.g. fstatat64 vs newfstatat). Currently the builtin RuleSets are defined assuming `x86_64`.
 
-# Landlock
+## Landlock
 
 Landlock allows you to restrict access to the filesystem via a variety of [access rights](https://www.kernel.org/doc/html/latest/userspace-api/landlock.html#access-rights). These access rights are applied either to existing files, or on existing directories, in which case the right will apply to all subdirectories and subfiles.
 
@@ -164,7 +167,7 @@ fn with_landlock() {
               .allow_create_in_dir(&tmp_dir_allow)
               .allow_write_file(&tmp_dir_allow)
         ).unwrap()
-	.apply_to_current_thread().unwrap();
+    .apply_to_current_thread().unwrap();
 
     // Opening arbitrary files now fails!
     let res = File::create(tmp_dir_deny.join("evil.txt"));
@@ -183,7 +186,7 @@ fn with_landlock() {
 }
 ```
 
-## Caveats
+### Caveats
 
 The existing groupings in SystemIO are a bit too orthogonal - `allow_create_in_dir` by itself will not allow you to create files because you need to also call `allow_write_file` typically unless you're very tightly controlling the flags passed to the openat/creat syscall.
 
