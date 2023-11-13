@@ -270,7 +270,7 @@ impl SafetyContext {
 
     /// Gather unconditional and conditional seccomp rules to be provided to the seccomp context.
     #[allow(clippy::needless_pass_by_value)]
-    fn gather_rules(rules: impl RuleSet) -> Vec<SeccompRule> {
+    fn gather_rules<R: RuleSet>(rules: R) -> Vec<SeccompRule> {
         let base_syscalls = rules.simple_rules();
         let mut rules = rules.conditional_rules();
         for syscall in base_syscalls {
@@ -289,7 +289,7 @@ impl SafetyContext {
     /// # Errors
     /// Will return [`ExtraSafeError::ConditionalNoEffectError`] if a conditional rule is enabled at
     /// the same time as a simple rule for a syscall, which would override the conditional rule.
-    pub fn enable(mut self, policy: impl RuleSet) -> Result<SafetyContext, ExtraSafeError> {
+    pub fn enable<R: RuleSet>(mut self, policy: R) -> Result<SafetyContext, ExtraSafeError> {
         #[cfg(feature = "landlock")]
         self.enable_landlock_rules(&policy)?;
 
@@ -299,7 +299,7 @@ impl SafetyContext {
     }
 
     #[cfg(feature = "landlock")]
-    fn enable_landlock_rules(&mut self, policy: &impl RuleSet) -> Result<(), ExtraSafeError> {
+    fn enable_landlock_rules<R: RuleSet>(&mut self, policy: &R) -> Result<(), ExtraSafeError> {
         let name = policy.name();
         let rules = policy.landlock_rules().into_iter()
             .map(|rule| (rule.path.clone(), LabeledLandlockRule(name, rule)));
@@ -315,7 +315,7 @@ impl SafetyContext {
         Ok(())
     }
 
-    fn enable_seccomp_rules(&mut self, policy: impl RuleSet) -> Result<(), ExtraSafeError> {
+    fn enable_seccomp_rules<R: RuleSet>(&mut self, policy: R) -> Result<(), ExtraSafeError> {
         let policy_name = policy.name();
         let new_rules = SafetyContext::gather_rules(policy)
             .into_iter()
