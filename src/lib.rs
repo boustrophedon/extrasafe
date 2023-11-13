@@ -220,6 +220,20 @@ impl<T: ?Sized + RuleSet> RuleSet for &T {
     }
 }
 
+impl RuleSet for syscalls::Sysno {
+    fn simple_rules(&self) -> Vec<syscalls::Sysno> {
+        Vec::from([*self])
+    }
+
+    fn conditional_rules(&self) -> HashMap<syscalls::Sysno, Vec<SeccompRule>> {
+        HashMap::new()
+    }
+
+    fn name(&self) -> &'static str {
+        self.name()
+    }
+}
+
 #[must_use]
 /// A struct representing a set of rules to be loaded into a seccomp filter and applied to the
 /// current thread, or all threads in the current process.
