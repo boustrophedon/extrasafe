@@ -19,7 +19,7 @@ pub struct LandlockRule {
 
 impl LandlockRule {
     /// Create a new Landlock Rule.
-    pub fn new(path: impl AsRef<Path>, access_rules: BitFlags<AccessFs>) -> LandlockRule {
+    pub fn new<P: AsRef<Path>>(path: P, access_rules: BitFlags<AccessFs>) -> LandlockRule {
         let path = path.as_ref().into();
         LandlockRule {
             path,

@@ -265,7 +265,7 @@ impl RuleSet for SystemIO {
 
 #[cfg(feature = "landlock")]
 impl SystemIO {
-    fn insert_flags(&mut self, path: impl AsRef<Path>, new_flags: BitFlags<AccessFs>) {
+    fn insert_flags<P: AsRef<Path>>(&mut self, path: P, new_flags: BitFlags<AccessFs>) {
         let path = path.as_ref().to_path_buf();
         let _flag = self.landlock_rules.entry(path.clone())
             .and_modify(|existing_flags| existing_flags.access_rules.insert(new_flags))
@@ -278,7 +278,7 @@ impl SystemIO {
     ///
     /// Note that if this is used with [`allow_open_readonly`] or other syscall-argument restricting
     /// methods, applying the `SafetyContext` will fail.
-    pub fn allow_read_path(mut self, path: impl AsRef<Path>) -> SystemIO {
+    pub fn allow_read_path<P: AsRef<Path>>(mut self, path: P) -> SystemIO {
         let new_flags = access::read_path();
         self.insert_flags(path, new_flags);
 
@@ -294,7 +294,7 @@ impl SystemIO {
     ///
     /// Note that if this is used with [`allow_open_readonly`] or other syscall-argument restricting
     /// methods, applying the `SafetyContext` will fail.
-    pub fn allow_write_file(mut self, path: impl AsRef<Path>) -> SystemIO {
+    pub fn allow_write_file<P: AsRef<Path>>(mut self, path: P) -> SystemIO {
         let new_flags = access::write_file();
         self.insert_flags(path, new_flags);
 
@@ -310,7 +310,7 @@ impl SystemIO {
     ///
     /// Note that if this is used with [`allow_open_readonly`] or other syscall-argument restricting
     /// methods, applying the `SafetyContext` will fail.
-    pub fn allow_create_in_dir(mut self, path: impl AsRef<Path>) -> SystemIO {
+    pub fn allow_create_in_dir<P: AsRef<Path>>(mut self, path: P) -> SystemIO {
         // write file here allows us to create files, but in order to actually write to them, you'd
         // need to enable the write syscall.
         let new_flags = access::create_file() | access::write_file();
@@ -323,7 +323,7 @@ impl SystemIO {
 
     /// Use Landlock to allow listing the contents of the given directory. If this function is
     /// called multiple times, all directories passed will be allowed.
-    pub fn allow_list_dir(mut self, path: impl AsRef<Path>) -> SystemIO {
+    pub fn allow_list_dir<P: AsRef<Path>>(mut self, path: P) -> SystemIO {
         let new_flags = access::list_dir();
         self.insert_flags(path, new_flags);
 
@@ -336,7 +336,7 @@ impl SystemIO {
 
     /// Use Landlock to allow creating directories. If this function is called multiple times, all
     /// directories passed will be allowed.
-    pub fn allow_create_dir(mut self, path: impl AsRef<Path>) -> SystemIO {
+    pub fn allow_create_dir<P: AsRef<Path>>(mut self, path: P) -> SystemIO {
         let new_flags = access::create_dir();
         self.insert_flags(path, new_flags);
 
@@ -347,7 +347,7 @@ impl SystemIO {
 
     /// Use Landlock to allow deleting files. If this function is called multiple times, all files
     /// passed will be allowed.
-    pub fn allow_remove_file(mut self, path: impl AsRef<Path>) -> SystemIO {
+    pub fn allow_remove_file<P: AsRef<Path>>(mut self, path: P) -> SystemIO {
         let new_flags = access::delete_file();
         self.insert_flags(path, new_flags);
 
@@ -364,7 +364,7 @@ impl SystemIO {
     ///
     /// Also recall that that in order to delete a directory with `unlink` or `rmdir` it must be
     /// empty.
-    pub fn allow_remove_dir(mut self, path: impl AsRef<Path>) -> SystemIO {
+    pub fn allow_remove_dir<P: AsRef<Path>>(mut self, path: P) -> SystemIO {
         let new_flags = access::delete_dir();
         self.insert_flags(path, new_flags);
 
