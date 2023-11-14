@@ -1,3 +1,19 @@
+unreleased
+----------
+- Add default implementation for `RuleSet::conditional_rules`
+- impl RuleSet for `syscalls::Sysno` for easier ad-hoc rulesets
+- Use generics instead of impl Trait in public functions to allow turbofish usage
+
+0.4.0
+-----
+- Add landlock functionality
+  - Add `landlock_rules` to RuleSet trait and new `LandlockRule` type
+  - Add `landlock_only` method to SafetyContext
+  - In test code, use rustls only in musl to get wider environment coverage
+  - Added several ExtraSafeError variants for Landlock-related errors
+  - See methods in SystemIO for how to use Landlock
+  - Landlock is enabled with the V2 ABI, which was added in kernel 5.19
+
 0.3.0
 -----
 - Switch seccomp backend to seccompiler
