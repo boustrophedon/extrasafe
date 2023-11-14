@@ -97,7 +97,18 @@ Seccomp, the underlying functionality provided by the kernel that extrasafe uses
 
 If you want to use syscalls that aren't included in any of the builtin rulesets, consider [filing an issue to request a new one!](https://github.com/boustrophedon/extrasafe/issues)
 
-In the meantime, you can create your own:
+`RuleSet` is implemented for the `Sysno` type directly, so if you just want to enable one or two syscalls, the simplest way to do so is:
+
+```rust
+extrasafe::SafetyContext::new()
+    .enable(syscalls::Sysno::reboot).unwrap()
+    .enable(syscalls::Sysno::sysinfo).unwrap()
+    .apply_to_current_thread().unwrap();
+```
+
+However, this doesn't work for conditional rules yet.
+
+In the meantime, you can create your own RuleSet:
 
 ```rust
 use extrasafe::*;
