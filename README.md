@@ -38,7 +38,7 @@ Additionally, we support slightly advanced use-cases:
   - Allow read/write on specific files (opened before loading the seccomp filters)
   - You can define your own set of syscalls to allow by implementing the RuleSet trait.
 
-We also support using Landlock to allow specific, targetted access to the filesystem:
+We also support using Landlock to allow specific, targeted access to the filesystem:
 
 ```rust
 fn main() {
