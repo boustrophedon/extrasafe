@@ -17,7 +17,7 @@ use landlock::RulesetError as LandlockError;
 pub enum ExtraSafeError {
     /// Error created when a simple Seccomp rule would override a conditional rule, or when trying to add a
     /// conditional rule when there's already a simple rule with the same syscall.
-    ConditionalNoEffectError(syscalls::Sysno, &'static str, &'static str),
+    ConditionalNoEffectError(crate::syscalls::Sysno, &'static str, &'static str),
     /// An error from the underlying seccomp library.
     SeccompError(SeccompilerError),
     /// No rules were enabled in the SafetyContext.

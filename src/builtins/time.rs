@@ -3,7 +3,7 @@
 
 use std::collections::HashSet;
 
-use syscalls::Sysno;
+use crate::syscalls::Sysno;
 
 use crate::RuleSet;
 

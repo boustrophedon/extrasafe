@@ -2,7 +2,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use syscalls::Sysno;
+use crate::syscalls::Sysno;
 
 use super::YesReally;
 use crate::{RuleSet, SeccompRule};
@@ -11,19 +11,24 @@ use crate::{RuleSet, SeccompRule};
 
 // TODO: add io_uring
 const NET_IO_SYSCALLS: &[Sysno] = &[
+    #[cfg(enabled_arch = "x86_64")]
     Sysno::epoll_create,
     Sysno::epoll_create1,
     Sysno::epoll_ctl,
+    #[cfg(enabled_arch = "x86_64")]
     Sysno::epoll_wait,
     Sysno::epoll_pwait,
     Sysno::epoll_pwait2,
+    #[cfg(enabled_arch = "x86_64")]
     Sysno::select,
     Sysno::pselect6,
+    #[cfg(enabled_arch = "x86_64")]
     Sysno::poll,
     Sysno::ppoll,
     Sysno::accept,
     Sysno::accept4,
     // used in reqwest::blocking I guess to notify when blocking reads finish?
+    #[cfg(enabled_arch = "x86_64")]
     Sysno::eventfd,
     Sysno::eventfd2,
     // Used to set tcp_nodelay
@@ -313,11 +318,11 @@ impl Networking {
 }
 
 impl RuleSet for Networking {
-    fn simple_rules(&self) -> Vec<syscalls::Sysno> {
+    fn simple_rules(&self) -> Vec<crate::syscalls::Sysno> {
         self.allowed.iter().copied().collect()
     }
 
-    fn conditional_rules(&self) -> HashMap<syscalls::Sysno, Vec<SeccompRule>> {
+    fn conditional_rules(&self) -> HashMap<crate::syscalls::Sysno, Vec<SeccompRule>> {
         self.custom.clone()
     }
 

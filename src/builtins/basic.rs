@@ -1,7 +1,7 @@
 //! Contains a [`RuleSet`] for allowing base syscalls that all programs will need, and are not
 //! dangerous for the most part.
 
-use syscalls::Sysno;
+use crate::syscalls::Sysno;
 
 use crate::RuleSet;
 
@@ -39,7 +39,9 @@ impl RuleSet for BasicCapabilities {
             Sysno::set_robust_list,
             // Readlink isn't dangerous because you still need to be able to open the file to do
             // anything with the resolved name.
+            #[cfg(enabled_arch = "x86_64")]
             Sysno::readlink,
+            Sysno::readlinkat,
             // Getpid/tid is fine.
             Sysno::getpid,
             Sysno::gettid,

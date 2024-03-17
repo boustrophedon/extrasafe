@@ -1,5 +1,5 @@
 use extrasafe::SafetyContext;
-use syscalls::Sysno;
+use extrasafe::syscalls::Sysno;
 
 #[test]
 #[should_panic]

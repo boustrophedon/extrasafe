@@ -2,7 +2,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use syscalls::Sysno;
+use crate::syscalls::Sysno;
 
 use crate::{RuleSet, SeccompRule};
 
@@ -91,7 +91,9 @@ pub struct ForkAndExec;
 impl RuleSet for ForkAndExec {
     fn simple_rules(&self) -> Vec<Sysno> {
         let mut rules = vec![
+            #[cfg(enabled_arch = "x86_64")]
             Sysno::fork,
+            #[cfg(enabled_arch = "x86_64")]
             Sysno::vfork,
             Sysno::execve,
             Sysno::execveat,
@@ -104,7 +106,11 @@ impl RuleSet for ForkAndExec {
         // musl creates a pipe when it starts a new process, and fails the operation if it can't
         // create the pipe
         if cfg!(target_env = "musl") {
-            rules.extend([Sysno::pipe, Sysno::pipe2]);
+            rules.extend([
+                #[cfg(enabled_arch = "x86_64")]
+                Sysno::pipe,
+                Sysno::pipe2,
+            ]);
         }
 
         rules
