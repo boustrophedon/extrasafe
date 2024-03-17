@@ -5,7 +5,7 @@ use std::collections::{HashMap, HashSet};
 use crate::syscalls::Sysno;
 
 use super::YesReally;
-use crate::{RuleSet, SeccompRule};
+use crate::{SeccompRule, RuleSet};
 
 // TODO: make bind calls conditional on the DGRAM/UNIX/STREAM flag in each function
 
@@ -13,55 +13,37 @@ use crate::{RuleSet, SeccompRule};
 const NET_IO_SYSCALLS: &[Sysno] = &[
     #[cfg(enabled_arch = "x86_64")]
     Sysno::epoll_create,
-    Sysno::epoll_create1,
-    Sysno::epoll_ctl,
+    Sysno::epoll_create1, Sysno::epoll_ctl,
     #[cfg(enabled_arch = "x86_64")]
     Sysno::epoll_wait,
-    Sysno::epoll_pwait,
-    Sysno::epoll_pwait2,
+    Sysno::epoll_pwait, Sysno::epoll_pwait2,
     #[cfg(enabled_arch = "x86_64")]
     Sysno::select,
     Sysno::pselect6,
     #[cfg(enabled_arch = "x86_64")]
     Sysno::poll,
-    Sysno::ppoll,
-    Sysno::accept,
-    Sysno::accept4,
+    Sysno::ppoll, Sysno::accept, Sysno::accept4,
     // used in reqwest::blocking I guess to notify when blocking reads finish?
     #[cfg(enabled_arch = "x86_64")]
     Sysno::eventfd,
     Sysno::eventfd2,
     // Used to set tcp_nodelay
-    Sysno::fcntl,
-    Sysno::ioctl,
+    Sysno::fcntl, Sysno::ioctl,
     Sysno::getsockopt,
     Sysno::setsockopt,
+
     // Misc socket info
     Sysno::getpeername,
     Sysno::getsockname,
 ];
 
 // listen is technically not a "read" syscall but you'd never listen and not read.
-const NET_READ_SYSCALLS: &[Sysno] = &[
-    Sysno::listen,
-    Sysno::recvfrom,
-    Sysno::recvmsg,
-    Sysno::recvmmsg,
-    Sysno::read,
-    Sysno::readv,
-    Sysno::preadv,
-    Sysno::preadv2,
-];
-const NET_WRITE_SYSCALLS: &[Sysno] = &[
-    Sysno::sendto,
-    Sysno::sendmsg,
-    Sysno::sendmmsg,
-    Sysno::sendfile,
-    Sysno::write,
-    Sysno::writev,
-    Sysno::pwritev,
-    Sysno::pwritev2,
-];
+const NET_READ_SYSCALLS: &[Sysno] = &[Sysno::listen,
+                                      Sysno::recvfrom, Sysno::recvmsg, Sysno::recvmmsg,
+                                      Sysno::read, Sysno::readv, Sysno::preadv, Sysno::preadv2];
+const NET_WRITE_SYSCALLS: &[Sysno] = &[Sysno::sendto, Sysno::sendmsg, Sysno::sendmmsg,
+                                       Sysno::sendfile,
+                                       Sysno::write, Sysno::writev, Sysno::pwritev, Sysno::pwritev2];
 
 // TODO: refactor Socket rule creation to reduce duplication in the allow_start_*_server functions
 
@@ -129,16 +111,14 @@ impl Networking {
         let rule = SeccompRule::new(Sysno::socket)
             .and_condition(seccomp_arg_filter!(arg0 & AF_INET == AF_INET))
             .and_condition(seccomp_arg_filter!(arg1 & SOCK_STREAM == SOCK_STREAM));
-        self.custom
-            .entry(Sysno::socket)
+        self.custom.entry(Sysno::socket)
             .or_insert_with(Vec::new)
             .push(rule);
         // IPv6
         let rule = SeccompRule::new(Sysno::socket)
             .and_condition(seccomp_arg_filter!(arg0 & AF_INET6 == AF_INET6))
             .and_condition(seccomp_arg_filter!(arg1 & SOCK_STREAM == SOCK_STREAM));
-        self.custom
-            .entry(Sysno::socket)
+        self.custom.entry(Sysno::socket)
             .or_insert_with(Vec::new)
             .push(rule);
 
@@ -177,16 +157,14 @@ impl Networking {
         let rule = SeccompRule::new(Sysno::socket)
             .and_condition(seccomp_arg_filter!(arg0 & AF_INET == AF_INET))
             .and_condition(seccomp_arg_filter!(arg1 & SOCK_DGRAM == SOCK_DGRAM));
-        self.custom
-            .entry(Sysno::socket)
+        self.custom.entry(Sysno::socket)
             .or_insert_with(Vec::new)
             .push(rule);
         // IPv6
         let rule = SeccompRule::new(Sysno::socket)
             .and_condition(seccomp_arg_filter!(arg0 & AF_INET6 == AF_INET6))
             .and_condition(seccomp_arg_filter!(arg1 & SOCK_DGRAM == SOCK_DGRAM));
-        self.custom
-            .entry(Sysno::socket)
+        self.custom.entry(Sysno::socket)
             .or_insert_with(Vec::new)
             .push(rule);
 
@@ -223,19 +201,17 @@ impl Networking {
         let rule = SeccompRule::new(Sysno::socket)
             .and_condition(seccomp_arg_filter!(arg0 & AF_INET == AF_INET))
             .and_condition(seccomp_arg_filter!(arg1 & SOCK_STREAM == SOCK_STREAM));
-        self.custom
-            .entry(Sysno::socket)
+        self.custom.entry(Sysno::socket)
             .or_insert_with(Vec::new)
             .push(rule);
         // IPv6
         let rule = SeccompRule::new(Sysno::socket)
             .and_condition(seccomp_arg_filter!(arg0 & AF_INET6 == AF_INET6))
             .and_condition(seccomp_arg_filter!(arg1 & SOCK_STREAM == SOCK_STREAM));
-        self.custom
-            .entry(Sysno::socket)
+        self.custom.entry(Sysno::socket)
             .or_insert_with(Vec::new)
             .push(rule);
-
+        
         self.allowed.extend(&[Sysno::connect]);
         self.allowed.extend(NET_IO_SYSCALLS);
         self.allowed.extend(NET_READ_SYSCALLS);
@@ -272,16 +248,14 @@ impl Networking {
         let rule = SeccompRule::new(Sysno::socket)
             .and_condition(seccomp_arg_filter!(arg0 & AF_UNIX == AF_UNIX))
             .and_condition(seccomp_arg_filter!(arg1 & SOCK_STREAM == SOCK_STREAM));
-        self.custom
-            .entry(Sysno::socket)
+        self.custom.entry(Sysno::socket)
             .or_insert_with(Vec::new)
             .push(rule);
         // DGRAM
         let rule = SeccompRule::new(Sysno::socket)
             .and_condition(seccomp_arg_filter!(arg0 & AF_UNIX == AF_UNIX))
             .and_condition(seccomp_arg_filter!(arg1 & SOCK_DGRAM == SOCK_DGRAM));
-        self.custom
-            .entry(Sysno::socket)
+        self.custom.entry(Sysno::socket)
             .or_insert_with(Vec::new)
             .push(rule);
 

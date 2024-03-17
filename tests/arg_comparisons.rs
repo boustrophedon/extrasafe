@@ -1,8 +1,8 @@
 #![allow(unsafe_code)]
 // allow unsafe to call syscalls directly
 
-use builtins::SystemIO;
 use extrasafe::*;
+use builtins::SystemIO;
 use extrasafe::syscalls::Sysno;
 
 use std::collections::HashMap;
@@ -16,7 +16,8 @@ impl RuleSet for IoctlRestricted64 {
 
     fn conditional_rules(&self) -> HashMap<Sysno, Vec<SeccompRule>> {
         let cmp = SeccompArgumentFilter::new64(1, SeccompilerComparator::Eq, self.0);
-        let rule = SeccompRule::new(Sysno::ioctl).and_condition(cmp);
+        let rule = SeccompRule::new(Sysno::ioctl)
+            .and_condition(cmp);
 
         HashMap::from([(Sysno::ioctl, vec![rule])])
     }
@@ -35,7 +36,8 @@ impl RuleSet for IoctlRestricted32 {
 
     fn conditional_rules(&self) -> HashMap<Sysno, Vec<SeccompRule>> {
         let cmp = SeccompArgumentFilter::new32(1, SeccompilerComparator::Eq, self.0);
-        let rule = SeccompRule::new(Sysno::ioctl).and_condition(cmp);
+        let rule = SeccompRule::new(Sysno::ioctl)
+            .and_condition(cmp);
 
         HashMap::from([(Sysno::ioctl, vec![rule])])
     }
@@ -44,6 +46,7 @@ impl RuleSet for IoctlRestricted32 {
         "ioctl restricted 32"
     }
 }
+
 
 struct GetUidRestricted;
 impl RuleSet for GetUidRestricted {
@@ -74,12 +77,11 @@ fn cmp_arg_syscall_unused_parameter() {
     assert!(uid1 > 0);
 
     extrasafe::SafetyContext::new()
-        .enable(SystemIO::nothing().allow_stdout().allow_stderr())
-        .unwrap()
-        .enable(GetUidRestricted)
-        .unwrap()
-        .apply_to_current_thread()
-        .unwrap();
+        .enable(SystemIO::nothing()
+            .allow_stdout()
+            .allow_stderr()).unwrap()
+        .enable(GetUidRestricted).unwrap()
+        .apply_to_current_thread().unwrap();
 
     // SAFETY: getuid just gives the current user's uid
     let uid2 = unsafe { libc::getuid() };
@@ -90,7 +92,7 @@ macro_rules! assert_errno {
     ($e: expr) => {
         let errno = std::io::Error::last_os_error().raw_os_error().unwrap();
         assert_eq!(errno, $e);
-    };
+    }
 }
 
 // See https://github.com/rust-vmm/seccompiler/issues/59 for more details on below two tests
@@ -100,12 +102,11 @@ fn cmp_arg_64bit_ioctl_musl_glibc_diff() {
     let seccomp_errno = 999;
     extrasafe::SafetyContext::new()
         .with_errno(seccomp_errno)
-        .enable(SystemIO::nothing().allow_stdout().allow_stderr())
-        .unwrap()
-        .enable(IoctlRestricted64(value))
-        .unwrap()
-        .apply_to_current_thread()
-        .unwrap();
+        .enable(SystemIO::nothing()
+            .allow_stdout()
+            .allow_stderr()).unwrap()
+        .enable(IoctlRestricted64(value)).unwrap()
+        .apply_to_current_thread().unwrap();
 
     // On glibc, the second parameter is a u64, so the value seen by the kernel matches the value
     // in our seccomp filter, and the ioctl call is allowed. It then sets errno to -9 since 4321 is
@@ -133,12 +134,11 @@ fn cmp_arg_32bit_ioctl_musl_glibc_same() {
     let seccomp_errno = 999;
     extrasafe::SafetyContext::new()
         .with_errno(seccomp_errno)
-        .enable(SystemIO::nothing().allow_stdout().allow_stderr())
-        .unwrap()
-        .enable(IoctlRestricted32(value))
-        .unwrap()
-        .apply_to_current_thread()
-        .unwrap();
+        .enable(SystemIO::nothing()
+            .allow_stdout()
+            .allow_stderr()).unwrap()
+        .enable(IoctlRestricted32(value)).unwrap()
+        .apply_to_current_thread().unwrap();
 
     // here both tests are the same except for value being i32 on musl
     #[cfg(target_env = "gnu")]

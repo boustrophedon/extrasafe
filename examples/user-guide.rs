@@ -1,19 +1,20 @@
 fn simple_example() {
-    use extrasafe::builtins::{Networking, SystemIO};
+    use extrasafe::builtins::{SystemIO, Networking};
 
     let ctx = extrasafe::SafetyContext::new();
     let ctx = ctx
-        .enable(SystemIO::nothing().allow_open_readonly())
-        .expect("Failed to add systemio ruleset to context")
+        .enable(
+            SystemIO::nothing()
+                .allow_open_readonly()
+            ).expect("Failed to add systemio ruleset to context")
         // The Networking RuleSet includes both read and write, but our files will be opened
         // readonly so we can't actually write to them.  We can still write to stdout and stderr
         // though.
         .enable(
             Networking::nothing()
                 .allow_start_tcp_clients()
-                .allow_running_tcp_clients(),
-        )
-        .expect("Failed to add networking ruleset to context");
+                .allow_running_tcp_clients()
+            ).expect("Failed to add networking ruleset to context");
     ctx.apply_to_current_thread()
         .expect("Failed to apply seccomp filters");
 
@@ -21,8 +22,8 @@ fn simple_example() {
 }
 
 fn custom_ruleset() {
-    use extrasafe::syscalls::Sysno;
     use extrasafe::*;
+    use extrasafe::syscalls::Sysno;
 
     use std::collections::HashMap;
 
@@ -39,8 +40,11 @@ fn custom_ruleset() {
             const SOCK_STREAM: u64 = libc::SOCK_STREAM as u64;
 
             let rule = SeccompRule::new(Sysno::socket)
-                .and_condition(seccomp_arg_filter!(arg0 & SOCK_STREAM == SOCK_STREAM));
-            HashMap::from([(Sysno::socket, vec![rule])])
+                .and_condition(
+                    seccomp_arg_filter!(arg0 & SOCK_STREAM == SOCK_STREAM));
+            HashMap::from([
+                (Sysno::socket, vec![rule,])
+            ])
         }
 
         fn name(&self) -> &'static str {
@@ -49,10 +53,8 @@ fn custom_ruleset() {
     }
 
     extrasafe::SafetyContext::new()
-        .enable(MyRuleSet)
-        .unwrap()
-        .apply_to_current_thread()
-        .unwrap();
+        .enable(MyRuleSet).unwrap()
+        .apply_to_current_thread().unwrap();
 }
 
 #[cfg(feature = "landlock")]
@@ -63,13 +65,11 @@ fn with_landlock() {
 
     extrasafe::SafetyContext::new()
         .enable(
-            extrasafe::builtins::SystemIO::nothing()
-                .allow_create_in_dir(&tmp_dir_allow)
-                .allow_write_file(&tmp_dir_allow),
-        )
-        .unwrap()
-        .apply_to_current_thread()
-        .unwrap();
+           extrasafe::builtins::SystemIO::nothing()
+              .allow_create_in_dir(&tmp_dir_allow)
+              .allow_write_file(&tmp_dir_allow)
+            ).unwrap()
+        .apply_to_current_thread().unwrap();
 
     // Opening arbitrary files now fails!
     let res = File::create(tmp_dir_deny.join("evil.txt"));

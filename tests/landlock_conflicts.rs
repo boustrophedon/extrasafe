@@ -1,6 +1,6 @@
 #![cfg(feature = "landlock")]
 
-use std::fs::{read_dir, File};
+use std::fs::{File, read_dir};
 
 use extrasafe::builtins::SystemIO;
 
@@ -11,44 +11,46 @@ fn landlock_with_seccomp_arg_filters_fails() {
     let path = tempfile::tempdir().unwrap();
 
     // same ruleset
-    let res = extrasafe::SafetyContext::new().enable(
-        SystemIO::nothing()
-            .allow_open_readonly()
-            .allow_list_dir(&path),
-    );
+    let res = extrasafe::SafetyContext::new()
+        .enable(
+            SystemIO::nothing()
+                .allow_open_readonly()
+                .allow_list_dir(&path)
+            );
 
-    assert!(
-        res.is_err(),
-        "Enabling filter succeeded with landlock and seccomp arg-restricted open"
-    );
+    assert!(res.is_err(), "Enabling filter succeeded with landlock and seccomp arg-restricted open");
     // TODO: seccomp/landlock clash error reporting
     // let err = res.unwrap_err();
     // assert_eq!(err.to_string().contains("xxx"));
 
     // different rulesets, landlock first
     let res = extrasafe::SafetyContext::new()
-        .enable(SystemIO::nothing().allow_open_readonly())
-        .unwrap()
-        .enable(SystemIO::nothing().allow_read_path(&path));
+        .enable(
+            SystemIO::nothing()
+                .allow_open_readonly()
+            ).unwrap()
+        .enable(
+            SystemIO::nothing()
+                .allow_read_path(&path)
+            );
 
-    assert!(
-        res.is_err(),
-        "Enabling filter succeeded with landlock and seccomp arg-restricted open"
-    );
+    assert!(res.is_err(), "Enabling filter succeeded with landlock and seccomp arg-restricted open");
     // TODO: seccomp/landlock clash error reporting
     // let err = res.unwrap_err();
     // assert!(err.to_string().contains("xxx"));
 
     // different rulesets, seccomp first
     let res = extrasafe::SafetyContext::new()
-        .enable(SystemIO::nothing().allow_read_path(&path))
-        .unwrap()
-        .enable(SystemIO::nothing().allow_open_readonly());
+        .enable(
+            SystemIO::nothing()
+                .allow_read_path(&path)
+            ).unwrap()
+        .enable(
+            SystemIO::nothing()
+                .allow_open_readonly()
+            );
 
-    assert!(
-        res.is_err(),
-        "Enabling filter succeeded with landlock and seccomp arg-restricted open"
-    );
+    assert!(res.is_err(), "Enabling filter succeeded with landlock and seccomp arg-restricted open");
     // TODO: seccomp/landlock clash error reporting
     // let err = res.unwrap_err();
     // assert!(err.to_string().contains("xxx"));
@@ -62,10 +64,7 @@ fn landlock_only() {
         .landlock_only()
         .apply_to_current_thread();
 
-    assert!(
-        res.is_err(),
-        "extrasafe did not error when applying with no seccomp or landlock rules"
-    );
+    assert!(res.is_err(), "extrasafe did not error when applying with no seccomp or landlock rules");
     let err = res.unwrap_err();
     assert!(err.to_string().contains("No rules were enabled"));
 
@@ -73,11 +72,12 @@ fn landlock_only() {
     let dir = tempfile::tempdir().unwrap();
 
     extrasafe::SafetyContext::new()
-        .enable(SystemIO::nothing().allow_create_in_dir(&dir))
-        .unwrap()
+        .enable(
+            SystemIO::nothing()
+                .allow_create_in_dir(&dir)
+            ).unwrap()
         .landlock_only()
-        .apply_to_current_thread()
-        .unwrap();
+        .apply_to_current_thread().unwrap();
 
     // test that we can run arbitrary syscalls
     let pid = unsafe { libc::getpid() };
@@ -86,21 +86,11 @@ fn landlock_only() {
     // test that we can create in the given directory
     let file_path = dir.path().join("okay.txt");
     let file_res = File::create(file_path);
-    assert!(
-        file_res.is_ok(),
-        "Failed to create file in allowed dir: {:?}",
-        file_res.unwrap_err()
-    );
+    assert!(file_res.is_ok(), "Failed to create file in allowed dir: {:?}", file_res.unwrap_err());
 
     // test that we can't list paths
     let list_res = read_dir(&dir);
-    assert!(
-        list_res.is_err(),
-        "Incorrectly succeeded in listing directory"
-    );
+    assert!(list_res.is_err(), "Incorrectly succeeded in listing directory");
     let list_res = read_dir("/etc");
-    assert!(
-        list_res.is_err(),
-        "Incorrectly succeeded in listing directory"
-    );
+    assert!(list_res.is_err(), "Incorrectly succeeded in listing directory");
 }

@@ -1,7 +1,8 @@
 #[cfg(not(target_os = "linux"))]
 #[test]
 fn returns_unsupported_os_error() {
-    let res = extrasafe::SafetyContext::new().apply_to_all_threads();
+    let res = extrasafe::SafetyContext::new()
+        .apply_to_all_threads();
 
     assert!(
         res.is_err(),

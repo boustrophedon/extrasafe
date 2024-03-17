@@ -1,6 +1,6 @@
 //! Contains a [`RuleSet`] for allowing IO-related syscalls, like file opening, reading, and writing.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashSet, HashMap};
 use std::fs::File;
 use std::os::unix::io::AsRawFd;
 
@@ -10,12 +10,12 @@ use std::path::{Path, PathBuf};
 use crate::syscalls::Sysno;
 
 #[cfg(feature = "landlock")]
-use crate::landlock::{access, AccessFs, BitFlags};
-#[cfg(feature = "landlock")]
 use crate::LandlockRule;
+#[cfg(feature = "landlock")]
+use crate::landlock::{access, AccessFs, BitFlags};
 
-use super::YesReally;
 use crate::{RuleSet, SeccompRule};
+use super::YesReally;
 
 pub(crate) const IO_READ_SYSCALLS: &[Sysno] = &[
     Sysno::read,
@@ -92,7 +92,7 @@ impl SystemIO {
             allowed: HashSet::new(),
             custom: HashMap::new(),
             #[cfg(feature = "landlock")]
-            landlock_rules: HashMap::new(),
+            landlock_rules: HashMap::new()
         }
     }
 
@@ -101,8 +101,7 @@ impl SystemIO {
         SystemIO::nothing()
             .allow_read()
             .allow_write()
-            .allow_open()
-            .yes_really()
+            .allow_open().yes_really()
             .allow_metadata()
             .allow_unlink()
             .allow_close()
@@ -159,23 +158,21 @@ impl SystemIO {
         // WRONLY or RDWR is required for O_TMPFILE so we're fine to leave it out anyway.
         // const O_TMPFILE: u64 = libc::O_TMPFILE as u64;
 
-        const WRITECREATE: u64 = O_WRONLY | O_RDWR | O_APPEND | O_CREAT | O_EXCL; // | O_TMPFILE;
+        const WRITECREATE: u64 = O_WRONLY | O_RDWR | O_APPEND | O_CREAT | O_EXCL;// | O_TMPFILE;
 
         // flags are the second argument for open but the third for openat
         #[cfg(enabled_arch = "x86_64")]
         {
             let rule = SeccompRule::new(Sysno::open)
                 .and_condition(seccomp_arg_filter!(arg1 & WRITECREATE == 0));
-            self.custom
-                .entry(Sysno::open)
+            self.custom.entry(Sysno::open)
                 .or_insert_with(Vec::new)
                 .push(rule);
         }
 
         let rule = SeccompRule::new(Sysno::openat)
             .and_condition(seccomp_arg_filter!(arg2 & WRITECREATE == 0));
-        self.custom
-            .entry(Sysno::openat)
+        self.custom.entry(Sysno::openat)
             .or_insert_with(Vec::new)
             .push(rule);
 
@@ -205,9 +202,9 @@ impl SystemIO {
 
     /// Allow reading from stdin
     pub fn allow_stdin(mut self) -> SystemIO {
-        let rule = SeccompRule::new(Sysno::read).and_condition(seccomp_arg_filter!(arg0 == 0));
-        self.custom
-            .entry(Sysno::read)
+        let rule = SeccompRule::new(Sysno::read)
+            .and_condition(seccomp_arg_filter!(arg0 == 0));
+        self.custom.entry(Sysno::read)
             .or_insert_with(Vec::new)
             .push(rule);
 
@@ -216,9 +213,9 @@ impl SystemIO {
 
     /// Allow writing to stdout
     pub fn allow_stdout(mut self) -> SystemIO {
-        let rule = SeccompRule::new(Sysno::write).and_condition(seccomp_arg_filter!(arg0 == 1));
-        self.custom
-            .entry(Sysno::write)
+        let rule = SeccompRule::new(Sysno::write)
+            .and_condition(seccomp_arg_filter!(arg0 == 1));
+        self.custom.entry(Sysno::write)
             .or_insert_with(Vec::new)
             .push(rule);
 
@@ -227,9 +224,9 @@ impl SystemIO {
 
     /// Allow writing to stderr
     pub fn allow_stderr(mut self) -> SystemIO {
-        let rule = SeccompRule::new(Sysno::write).and_condition(seccomp_arg_filter!(arg0 == 2));
-        self.custom
-            .entry(Sysno::write)
+        let rule = SeccompRule::new(Sysno::write)
+            .and_condition(seccomp_arg_filter!(arg0 == 2));
+        self.custom.entry(Sysno::write)
             .or_insert_with(Vec::new)
             .push(rule);
 
@@ -245,21 +242,18 @@ impl SystemIO {
     /// it's possible that the fd will be reused and therefore may be read from.
     #[allow(clippy::missing_panics_doc)]
     pub fn allow_file_read(mut self, file: &File) -> SystemIO {
-        let fd = file
-            .as_raw_fd()
-            .try_into()
-            .expect("provided fd was negative");
+        let fd = file.as_raw_fd().try_into().expect("provided fd was negative");
         for &syscall in IO_READ_SYSCALLS {
-            let rule = SeccompRule::new(syscall).and_condition(seccomp_arg_filter!(arg0 == fd));
-            self.custom
-                .entry(syscall)
+            let rule = SeccompRule::new(syscall)
+                .and_condition(seccomp_arg_filter!(arg0 == fd));
+            self.custom.entry(syscall)
                 .or_insert_with(Vec::new)
                 .push(rule);
         }
         for &syscall in IO_METADATA_SYSCALLS {
-            let rule = SeccompRule::new(syscall).and_condition(seccomp_arg_filter!(arg0 == fd));
-            self.custom
-                .entry(syscall)
+            let rule = SeccompRule::new(syscall)
+                .and_condition(seccomp_arg_filter!(arg0 == fd));
+            self.custom.entry(syscall)
                 .or_insert_with(Vec::new)
                 .push(rule);
         }
@@ -276,13 +270,10 @@ impl SystemIO {
     /// it's possible that the fd will be reused and therefore may be written to.
     #[allow(clippy::missing_panics_doc)]
     pub fn allow_file_write(mut self, file: &File) -> SystemIO {
-        let fd = file
-            .as_raw_fd()
-            .try_into()
-            .expect("provided fd was negative");
-        let rule = SeccompRule::new(Sysno::write).and_condition(seccomp_arg_filter!(arg0 == fd));
-        self.custom
-            .entry(Sysno::write)
+        let fd = file.as_raw_fd().try_into().expect("provided fd was negative");
+        let rule = SeccompRule::new(Sysno::write)
+            .and_condition(seccomp_arg_filter!(arg0 == fd));
+        self.custom.entry(Sysno::write)
             .or_insert_with(Vec::new)
             .push(rule);
 
@@ -315,9 +306,7 @@ impl RuleSet for SystemIO {
 impl SystemIO {
     fn insert_flags<P: AsRef<Path>>(&mut self, path: P, new_flags: BitFlags<AccessFs>) {
         let path = path.as_ref().to_path_buf();
-        let _flag = self
-            .landlock_rules
-            .entry(path.clone())
+        let _flag = self.landlock_rules.entry(path.clone())
             .and_modify(|existing_flags| existing_flags.access_rules.insert(new_flags))
             .or_insert_with(|| LandlockRule::new(&path, new_flags));
     }
@@ -336,8 +325,7 @@ impl SystemIO {
         self.allow_close()
             .allow_read()
             .allow_metadata()
-            .allow_open()
-            .yes_really()
+            .allow_open().yes_really()
     }
 
     /// Use Landlock to allow only the specified file to be written to. If this function is called
@@ -353,8 +341,7 @@ impl SystemIO {
         self.allow_close()
             .allow_write()
             .allow_metadata()
-            .allow_open()
-            .yes_really()
+            .allow_open().yes_really()
     }
 
     /// Use Landlock to allow files to be created in the given directory. If this function is called
@@ -383,8 +370,7 @@ impl SystemIO {
         self.allow_metadata()
             .allow_close()
             .allow_ioctl()
-            .allow_open()
-            .yes_really()
+            .allow_open().yes_really()
     }
 
     /// Use Landlock to allow creating directories. If this function is called multiple times, all
@@ -453,28 +439,20 @@ impl SystemIO {
         self.allow_close()
             .allow_read()
             .allow_metadata()
-            .allow_open()
-            .yes_really()
+            .allow_open().yes_really()
     }
 
     /// Use Landlock to allow access to DNS files, like /etc/resolv.conf
     pub fn allow_dns_files(mut self) -> SystemIO {
         let new_flags = access::read_path();
         // TODO: libnss exec perms?
-        for path in &[
-            "/etc/resolv.conf",
-            "/etc/hosts",
-            "/etc/host.conf",
-            "/etc/nsswitch.conf",
-            "/etc/gai.conf",
-        ] {
+        for path in &["/etc/resolv.conf", "/etc/hosts", "/etc/host.conf", "/etc/nsswitch.conf", "/etc/gai.conf"] {
             self.insert_flags(path, new_flags);
         }
         // allow relevant syscalls as well
         self.allow_close()
             .allow_read()
             .allow_metadata()
-            .allow_open()
-            .yes_really()
+            .allow_open().yes_really()
     }
 }

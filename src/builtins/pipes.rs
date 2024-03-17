@@ -1,7 +1,7 @@
 //! Contains a [`RuleSet`] for allowing pipes
 
-use crate::RuleSet;
-use crate::syscalls::Sysno;
+use std::collections::HashMap;
+use crate::{SeccompRule, RuleSet, syscalls::Sysno};
 
 /// [`Pipes`] allows you to create anonymous pipes for inter-process communication via the `pipe`
 /// syscalls.

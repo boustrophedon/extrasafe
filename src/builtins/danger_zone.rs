@@ -4,7 +4,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::syscalls::Sysno;
 
-use crate::{RuleSet, SeccompRule};
+use crate::{SeccompRule, RuleSet};
 
 use super::YesReally;
 
@@ -95,12 +95,9 @@ impl RuleSet for ForkAndExec {
             Sysno::fork,
             #[cfg(enabled_arch = "x86_64")]
             Sysno::vfork,
-            Sysno::execve,
-            Sysno::execveat,
-            Sysno::wait4,
-            Sysno::waitid,
-            Sysno::clone,
-            Sysno::clone3,
+            Sysno::execve, Sysno::execveat,
+            Sysno::wait4, Sysno::waitid,
+            Sysno::clone, Sysno::clone3,
         ];
 
         // musl creates a pipe when it starts a new process, and fails the operation if it can't

@@ -8,9 +8,9 @@ use std::path::PathBuf;
 use seccompiler::Error as SeccompilerError;
 
 #[cfg(feature = "landlock")]
-use landlock::PathFdError;
-#[cfg(feature = "landlock")]
 use landlock::RulesetError as LandlockError;
+#[cfg(feature = "landlock")]
+use landlock::PathFdError;
 
 #[derive(Debug)]
 /// The error type produced by [`crate::SafetyContext`]

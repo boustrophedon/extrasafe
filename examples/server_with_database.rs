@@ -61,20 +61,18 @@ fn run_server() {
     // spawn db server thread
     std::thread::Builder::new()
         .name("db".into())
-        .spawn(move || run_db(&db_queue))
-        .unwrap();
-
+        .spawn(move || run_db(&db_queue)).unwrap();
+    
     // set up runtime
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
-        .build()
-        .unwrap();
+        .build().unwrap();
     let listener = std::net::TcpListener::bind("127.0.0.1:5575").unwrap();
 
     // extrasafe context
     SafetyContext::new()
-        .enable(Networking::nothing().allow_running_tcp_servers())
-        .unwrap()
+        .enable(Networking::nothing()
+            .allow_running_tcp_servers()).unwrap()
         .apply_to_current_thread()
         .unwrap();
 
@@ -100,7 +98,8 @@ fn run_server() {
                 let messages = recv.recv().unwrap();
 
                 messages.join("\n")
-            }));
+            })
+        );
 
     let svc = warp::service(routes);
     let make_svc = hyper::service::make_service_fn(move |_| {
@@ -131,24 +130,20 @@ fn run_db(queue: &DbConn) {
     db.pragma_update(None, "locking_mode", "exclusive").unwrap();
     db.pragma_update(None, "journal_mode", "wal").unwrap();
 
-    db.execute("CREATE TABLE messages ( msg TEXT NOT NULL );", [])
-        .unwrap();
+    db.execute("CREATE TABLE messages ( msg TEXT NOT NULL );", []).unwrap();
     let mut get_rows = db.prepare("SELECT msg FROM messages;").unwrap();
     let mut insert_row = db.prepare("INSERT INTO messages VALUES (?)").unwrap();
 
     // after opening file, set extrasafe context
     SafetyContext::new()
-        .enable(
-            SystemIO::nothing()
-                .allow_read()
-                .allow_write()
-                .allow_metadata()
-                .allow_ioctl()
-                .allow_close(),
-        )
-        .unwrap()
-        .enable(Threads::nothing().allow_sleep().yes_really())
-        .unwrap()
+        .enable(SystemIO::nothing()
+            .allow_read()
+            .allow_write()
+            .allow_metadata()
+            .allow_ioctl()
+            .allow_close()).unwrap()
+        .enable(Threads::nothing()
+            .allow_sleep().yes_really()).unwrap()
         .apply_to_current_thread()
         .unwrap();
 
@@ -167,8 +162,7 @@ fn run_db(queue: &DbConn) {
         match msg {
             DBMsg::List(send) => {
                 let messages: Vec<String> = get_rows
-                    .query_map([], |row| row.get(0))
-                    .unwrap()
+                    .query_map([], |row| row.get(0)).unwrap()
                     .map(Result::unwrap)
                     .collect();
 
@@ -185,13 +179,12 @@ fn run_client_write(msg: &str) {
     // set up runtime
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
-        .build()
-        .unwrap();
+        .build().unwrap();
 
     // Set up extrasafe context
     SafetyContext::new()
-        .enable(Networking::nothing().allow_start_tcp_clients())
-        .unwrap()
+        .enable(Networking::nothing()
+            .allow_start_tcp_clients()).unwrap()
         .apply_to_current_thread()
         .unwrap();
     println!("about to make request with msg {}", msg);
@@ -223,42 +216,39 @@ fn run_client_read() {
     let runtime = tokio::runtime::Builder::new_current_thread()
         .worker_threads(1)
         .enable_all()
-        .build()
-        .unwrap();
+        .build().unwrap();
 
     let client = reqwest::Client::new();
 
     // enable extrasafe context
     let ctx = SafetyContext::new()
-        .enable(
-            Networking::nothing()
-                // Necessary for DNS
-                .allow_start_udp_servers()
-                .yes_really()
-                .allow_start_tcp_clients(),
-        )
-        .unwrap()
+        .enable(Networking::nothing()
+            // Necessary for DNS
+            .allow_start_udp_servers().yes_really()
+            .allow_start_tcp_clients()
+            ).unwrap()
         // For some reason only if we make two requests with a client does it use multiple threads,
         // so we only need them in the reader thread rather than the writer.
-        .enable(Threads::nothing().allow_create())
-        .unwrap();
+        .enable(Threads::nothing()
+            .allow_create()).unwrap();
 
     #[cfg(feature = "landlock")]
-    let ctx = ctx
-        .enable(SystemIO::nothing().allow_dns_files().allow_ssl_files())
-        .unwrap();
+    let ctx = ctx.enable(
+            SystemIO::nothing()
+                .allow_dns_files()
+                .allow_ssl_files()
+        ).unwrap();
     #[cfg(not(feature = "landlock"))]
-    let ctx = ctx
-        .enable(
+    let ctx = ctx.enable(
             SystemIO::nothing()
                 .allow_open_readonly()
                 .allow_read()
                 .allow_metadata()
                 .allow_close(),
-        )
-        .unwrap();
+        ).unwrap();
 
-    ctx.apply_to_current_thread().unwrap();
+    ctx.apply_to_current_thread()
+        .unwrap();
 
     // make request
     runtime.block_on(async {
@@ -272,10 +262,7 @@ fn run_client_read() {
             res.unwrap_err()
         );
         let text = res.unwrap();
-        println!(
-            "first 10 bytes of response from example.org {}",
-            &text[..10]
-        );
+        println!("first 10 bytes of response from example.org {}", &text[..10]);
 
         let res = client.get("http://127.0.0.1:5575/read").send().await;
         assert!(
@@ -294,8 +281,7 @@ fn main() {
     //  -- Spawn server
     let _server_thread = std::thread::Builder::new()
         .name("server".into())
-        .spawn(run_server)
-        .unwrap();
+        .spawn(run_server).unwrap();
 
     // give server time to start up
     std::thread::sleep(std::time::Duration::from_millis(100));
@@ -303,8 +289,7 @@ fn main() {
     // -- write "hello" to db
     let client1_thread = std::thread::Builder::new()
         .name("client1".into())
-        .spawn(|| run_client_write("hello"))
-        .unwrap();
+        .spawn(|| run_client_write("hello")).unwrap();
 
     let res1 = client1_thread.join();
     assert!(res1.is_ok(), "client1 failed: {:?}", res1.unwrap_err());
@@ -312,8 +297,7 @@ fn main() {
     // -- write "extrasafe" to db
     let client2_thread = std::thread::Builder::new()
         .name("client2".into())
-        .spawn(|| run_client_write("extrasafe"))
-        .unwrap();
+        .spawn(|| run_client_write("extrasafe")).unwrap();
 
     let res2 = client2_thread.join();
     assert!(res2.is_ok(), "client2 failed: {:?}", res2.unwrap_err());
@@ -321,8 +305,7 @@ fn main() {
     // -- read back, check messages are there in order
     let client3_thread = std::thread::Builder::new()
         .name("client3".into())
-        .spawn(run_client_read)
-        .unwrap();
+        .spawn(run_client_read).unwrap();
     let res3 = client3_thread.join();
     assert!(res3.is_ok(), "client3 failed: {:?}", res3.unwrap_err());
 }

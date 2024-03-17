@@ -24,8 +24,8 @@ impl RuleSet for JustWrite {
 /// (This is because the simple rule would override the conditional one)
 fn invalid_combination_new_simple() {
     let res = extrasafe::SafetyContext::new()
-        .enable(SystemIO::nothing().allow_stdout())
-        .unwrap()
+        .enable(SystemIO::nothing()
+            .allow_stdout()).unwrap()
         .enable(SystemIO::everything());
 
     assert!(
@@ -40,13 +40,10 @@ fn invalid_combination_new_simple() {
 #[test]
 fn invalid_combination_new_conditional() {
     let res = extrasafe::SafetyContext::new()
-        .enable(SystemIO::everything())
-        .unwrap()
-        .enable(SystemIO::nothing().allow_stdout());
-    assert!(
-        res.is_err(),
-        "Extrasafe didn't fail when adding conflicting rules"
-    );
+        .enable(SystemIO::everything()).unwrap()
+        .enable(SystemIO::nothing()
+            .allow_stdout());
+    assert!(res.is_err(), "Extrasafe didn't fail when adding conflicting rules");
 
     let err = res.unwrap_err();
     assert_eq!(err.to_string(), "A conditional rule on syscall `write` from RuleSet `SystemIO` would be overridden by a simple rule from RuleSet `SystemIO`.");
@@ -56,8 +53,8 @@ fn invalid_combination_new_conditional() {
 /// same as above but with different rulesets to check the error message
 fn invalid_combination_new_simple_different_name() {
     let res = extrasafe::SafetyContext::new()
-        .enable(SystemIO::nothing().allow_stdout())
-        .unwrap()
+        .enable(SystemIO::nothing()
+            .allow_stdout()).unwrap()
         .enable(JustWrite);
     assert!(
         res.is_err(),
@@ -71,13 +68,10 @@ fn invalid_combination_new_simple_different_name() {
 #[test]
 fn invalid_combination_new_conditional_different_name() {
     let res = extrasafe::SafetyContext::new()
-        .enable(JustWrite)
-        .unwrap()
-        .enable(SystemIO::nothing().allow_stdout());
-    assert!(
-        res.is_err(),
-        "Extrasafe didn't fail when adding conflicting rules"
-    );
+        .enable(JustWrite).unwrap()
+        .enable(SystemIO::nothing()
+            .allow_stdout());
+    assert!(res.is_err(), "Extrasafe didn't fail when adding conflicting rules");
 
     let err = res.unwrap_err();
     assert_eq!(err.to_string(), "A conditional rule on syscall `write` from RuleSet `SystemIO` would be overridden by a simple rule from RuleSet `JustWrite`.");
@@ -86,12 +80,13 @@ fn invalid_combination_new_conditional_different_name() {
 #[test]
 /// Test that adding a conditional and simple rule in the same `RuleSet` produces an error
 fn invalid_combination_read_and_stdin() {
-    let res =
-        extrasafe::SafetyContext::new().enable(SystemIO::nothing().allow_read().allow_stdin());
-    assert!(
-        res.is_err(),
-        "Extrasafe didn't fail when adding conflicting rules"
-    );
+
+    let res = extrasafe::SafetyContext::new()
+        .enable(SystemIO::nothing()
+            .allow_read()
+            .allow_stdin()
+        );
+    assert!(res.is_err(), "Extrasafe didn't fail when adding conflicting rules");
 
     let err = res.unwrap_err();
     assert_eq!(err.to_string(), "A conditional rule on syscall `read` from RuleSet `SystemIO` would be overridden by a simple rule from RuleSet `SystemIO`.");
@@ -100,7 +95,12 @@ fn invalid_combination_read_and_stdin() {
 #[test]
 /// Test that adding duplicate simple rules in the same `RuleSet` doesn't produce an error
 fn not_invalid_combination_duplicate_simple() {
-    let res = extrasafe::SafetyContext::new().enable(SystemIO::nothing().allow_read().allow_read());
+
+    let res = extrasafe::SafetyContext::new()
+        .enable(SystemIO::nothing()
+            .allow_read()
+            .allow_read()
+        );
     assert!(res.is_ok());
 
     let res = res.unwrap().apply_to_current_thread();
@@ -110,10 +110,13 @@ fn not_invalid_combination_duplicate_simple() {
 #[test]
 /// Test that adding duplicate simple rules in the same `RuleSet` doesn't produce an error
 fn not_invalid_combination_duplicate_simple2() {
+
     let res = extrasafe::SafetyContext::new()
-        .enable(SystemIO::nothing().allow_read())
-        .unwrap()
-        .enable(SystemIO::nothing().allow_read());
+        .enable(SystemIO::nothing()
+            .allow_read()).unwrap()
+        .enable(SystemIO::nothing()
+            .allow_read()
+        );
     assert!(res.is_ok());
 
     let res = res.unwrap().apply_to_current_thread();
@@ -123,8 +126,12 @@ fn not_invalid_combination_duplicate_simple2() {
 #[test]
 /// Test that adding duplicate conditional rules in the same `RuleSet` doesn't produce an error
 fn not_invalid_combination_duplicate_conditional() {
-    let res =
-        extrasafe::SafetyContext::new().enable(SystemIO::nothing().allow_stdin().allow_stdin());
+
+    let res = extrasafe::SafetyContext::new()
+        .enable(SystemIO::nothing()
+            .allow_stdin()
+            .allow_stdin()
+        );
     assert!(res.is_ok());
 
     let res = res.unwrap().apply_to_current_thread();
@@ -134,10 +141,14 @@ fn not_invalid_combination_duplicate_conditional() {
 #[test]
 /// Test that adding duplicate conditional rules from different `RuleSet`s doesn't produce an error
 fn not_invalid_combination_duplicate_conditional2() {
+
     let res = extrasafe::SafetyContext::new()
-        .enable(SystemIO::nothing().allow_stdin())
-        .unwrap()
-        .enable(SystemIO::nothing().allow_stdin());
+        .enable(SystemIO::nothing()
+            .allow_stdin()
+        ).unwrap()
+        .enable(SystemIO::nothing()
+            .allow_stdin()
+        );
     assert!(res.is_ok());
 
     let res = res.unwrap().apply_to_current_thread();

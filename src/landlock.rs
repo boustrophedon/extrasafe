@@ -5,10 +5,7 @@
 use std::path::{Path, PathBuf};
 
 pub use landlock::RulesetError as LandlockError;
-pub use landlock::{
-    Access, AccessFs, BitFlags, CompatLevel, Compatible, PathBeneath, PathFd, Ruleset, RulesetAttr,
-    RulesetCreatedAttr, ABI,
-};
+pub use landlock::{ABI, Access, AccessFs, BitFlags, Compatible, CompatLevel, PathBeneath, PathFd, Ruleset, RulesetAttr, RulesetCreatedAttr};
 
 /// A Landlock rule. It consists of a path and a collection of access rights which determine what
 /// actions can be performed on that path.
@@ -24,7 +21,10 @@ impl LandlockRule {
     /// Create a new Landlock Rule.
     pub fn new<P: AsRef<Path>>(path: P, access_rules: BitFlags<AccessFs>) -> LandlockRule {
         let path = path.as_ref().into();
-        LandlockRule { path, access_rules }
+        LandlockRule {
+            path,
+            access_rules
+        }
     }
 }
 

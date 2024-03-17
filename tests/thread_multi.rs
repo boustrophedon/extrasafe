@@ -16,10 +16,10 @@ fn sync_thread_contexts() {
 
     let seccomp_thread = thread::spawn(move || {
         extrasafe::SafetyContext::new()
-            .enable(SystemIO::nothing().allow_stdout().allow_stderr())
-            .unwrap()
-            .apply_to_all_threads()
-            .unwrap();
+            .enable(SystemIO::nothing()
+                .allow_stdout()
+                .allow_stderr()).unwrap()
+            .apply_to_all_threads().unwrap();
         // setup_done
         sender1.send(()).unwrap();
 
