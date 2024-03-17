@@ -1,6 +1,14 @@
 build:
 	cargo build --feature=landlock
 
+# Checks if code can be built
+check:
+	cargo check --features=landlock
+
+check-ci:
+	cargo check --target=$(TARGET_TRIPLE) --features=landlock
+	cargo check --target=$(TARGET_TRIPLE) --no-default-features
+
 # Run all tests and examples
 test:
 	cargo test --tests --examples --all-features

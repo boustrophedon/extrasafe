@@ -36,6 +36,30 @@ jobs:
       - name: Run tests
         run: make test-ci TARGET_TRIPLE=${{ matrix.target-triple }}
 
+  check:
+    name: Check if code compiles
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target-triple:
+          - x86_64-unknown-linux-gnu
+          - x86_64-unknown-linux-musl
+          - aarch64-unknown-linux-gnu
+          - aarch64-unknown-linux-musl
+          - riscv64gc-unknown-linux-gnu
+          - riscv64gc-unknown-linux-musl
+    steps:
+      - name: Install musl lib
+        if: ${{ contains(matrix.target-triple, 'musl') }}
+        run: sudo apt-get install musl-tools
+      - name: Install target triple
+        run: rustup target install ${{ matrix.target-triple }}
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run tests
+        run: make check-ci TARGET_TRIPLE=${{ matrix.target-triple }}
+
   doc:
     name: Documentation Check
     runs-on: ubuntu-latest
