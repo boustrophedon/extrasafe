@@ -16,17 +16,16 @@ use std::fs::File;
 /// threads. This is achieved in this test by blocking IO on one thread and not on another, and
 /// checking IO can be performed in the other thread after loading the context in the first.
 fn different_threads_with_different_contexts() {
-
     // These channels will block on send until the receiver has called recv.
     let (sender1, recv1) = sync_channel::<()>(0);
     let (sender2, recv2) = sync_channel::<()>(0);
 
     let seccomp_thread = thread::spawn(move || {
         extrasafe::SafetyContext::new()
-            .enable(SystemIO::nothing()
-                .allow_stdout()
-                .allow_stderr()).unwrap()
-            .apply_to_current_thread().unwrap();
+            .enable(SystemIO::nothing().allow_stdout().allow_stderr())
+            .unwrap()
+            .apply_to_current_thread()
+            .unwrap();
         // setup_done
         sender1.send(()).unwrap();
 

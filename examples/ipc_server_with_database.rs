@@ -36,7 +36,10 @@ type DbConn = Arc<Mutex<UnixStream>>;
 fn run_subprocess(cmd: &[&str]) -> std::process::Child {
     let exe_path = std::env::current_exe().unwrap();
 
-    let args: Vec<_> = ["run_main", "--", "--sub"].iter().chain(cmd.iter()).collect();
+    let args: Vec<_> = ["run_main", "--", "--sub"]
+        .iter()
+        .chain(cmd.iter())
+        .collect();
 
     std::process::Command::new(exe_path.to_str().unwrap())
         .arg0(format!("{}-subprocess", cmd[0]))
@@ -63,13 +66,14 @@ fn run_webserver(db_socket_path: &str) {
     // set up runtime
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
-        .build().unwrap();
+        .build()
+        .unwrap();
     let listener = std::net::TcpListener::bind("127.0.0.1:5576").unwrap();
 
     // extrasafe context
     SafetyContext::new()
-        .enable(Networking::nothing()
-            .allow_running_tcp_servers()).unwrap()
+        .enable(Networking::nothing().allow_running_tcp_servers())
+        .unwrap()
         .apply_to_current_thread()
         .unwrap();
 
@@ -111,8 +115,7 @@ fn run_webserver(db_socket_path: &str) {
                     .to_string();
 
                 messages
-            })
-        );
+            }));
 
     let svc = warp::service(routes);
     let make_svc = hyper::service::make_service_fn(move |_| {
@@ -147,25 +150,31 @@ fn run_db(socket_path: &str) {
     db.pragma_update(None, "locking_mode", "exclusive").unwrap();
     db.pragma_update(None, "journal_mode", "wal").unwrap();
 
-    db.execute("CREATE TABLE messages ( msg TEXT NOT NULL );", []).unwrap();
+    db.execute("CREATE TABLE messages ( msg TEXT NOT NULL );", [])
+        .unwrap();
     let mut get_rows = db.prepare("SELECT msg FROM messages;").unwrap();
     let mut insert_row = db.prepare("INSERT INTO messages VALUES (?)").unwrap();
 
     // after opening connection socket and db file, set extrasafe context
     SafetyContext::new()
-        .enable(Networking::nothing()
-            .allow_connect()
-            .yes_really()
-            .allow_running_unix_servers()
-        ).unwrap()
-        .enable(SystemIO::nothing()
-            .allow_read()
-            .allow_write()
-            .allow_metadata()
-            .allow_ioctl()
-            .allow_close()).unwrap()
-        .enable(Threads::nothing()
-            .allow_sleep().yes_really()).unwrap()
+        .enable(
+            Networking::nothing()
+                .allow_connect()
+                .yes_really()
+                .allow_running_unix_servers(),
+        )
+        .unwrap()
+        .enable(
+            SystemIO::nothing()
+                .allow_read()
+                .allow_write()
+                .allow_metadata()
+                .allow_ioctl()
+                .allow_close(),
+        )
+        .unwrap()
+        .enable(Threads::nothing().allow_sleep().yes_really())
+        .unwrap()
         .apply_to_current_thread()
         .unwrap();
 
@@ -197,18 +206,17 @@ fn run_db(socket_path: &str) {
         let msg: DBMsg;
         if buf == "list" {
             msg = DBMsg::List;
-        }
-        else if buf.starts_with("write") {
+        } else if buf.starts_with("write") {
             msg = DBMsg::Write(buf[6..].to_string());
-        }
-        else {
+        } else {
             panic!("unknown message recieved in db: {}", buf);
         }
 
         match msg {
             DBMsg::List => {
                 let messages: Vec<String> = get_rows
-                    .query_map([], |row| row.get(0)).unwrap()
+                    .query_map([], |row| row.get(0))
+                    .unwrap()
                     .map(Result::unwrap)
                     .collect();
 
@@ -231,8 +239,8 @@ fn run_client_write(msg: &str) {
 
     // Set up extrasafe context
     SafetyContext::new()
-        .enable(Networking::nothing()
-            .allow_start_tcp_clients()).unwrap()
+        .enable(Networking::nothing().allow_start_tcp_clients())
+        .unwrap()
         .apply_to_current_thread()
         .unwrap();
     println!("about to make request with msg {}", msg);
@@ -271,34 +279,35 @@ fn run_client_read() {
 
     // enable extrasafe context
     let ctx = SafetyContext::new()
-        .enable(Networking::nothing()
-            // Necessary for DNS
-            .allow_start_udp_servers().yes_really()
-            .allow_start_tcp_clients()
-            ).unwrap()
+        .enable(
+            Networking::nothing()
+                // Necessary for DNS
+                .allow_start_udp_servers()
+                .yes_really()
+                .allow_start_tcp_clients(),
+        )
+        .unwrap()
         // For some reason only if we make two requests with a client does it use multiple threads,
         // so we only need them in the reader thread rather than the writer.
-        .enable(Threads::nothing()
-            .allow_create()).unwrap();
+        .enable(Threads::nothing().allow_create())
+        .unwrap();
 
     #[cfg(not(feature = "landlock"))]
-    let ctx = ctx.enable(
+    let ctx = ctx
+        .enable(
             SystemIO::nothing()
                 .allow_open_readonly()
                 .allow_read()
                 .allow_metadata()
                 .allow_close(),
-        ).unwrap();
+        )
+        .unwrap();
     #[cfg(feature = "landlock")]
-    let ctx = ctx.enable(
-            SystemIO::nothing()
-                .allow_dns_files()
-                .allow_ssl_files()
-        ).unwrap();
-
-    ctx.apply_to_current_thread()
+    let ctx = ctx
+        .enable(SystemIO::nothing().allow_dns_files().allow_ssl_files())
         .unwrap();
 
+    ctx.apply_to_current_thread().unwrap();
 
     // make request
     runtime.block_on(async {
@@ -333,16 +342,13 @@ fn main() {
     if args.contains(&"--sub".into()) {
         // If args is "example_prog [possible other options] --sub subcommand subargs...", run the subcommand
         if let Some(idx) = args.iter().position(|s| s == "db") {
-            run_db(&args[idx+1]);
-        }
-        else if let Some(idx) = args.iter().position(|s| s == "webserver") {
-            run_webserver(&args[idx+1]);
-        }
-        else if args.contains(&"read_client".into()) {
+            run_db(&args[idx + 1]);
+        } else if let Some(idx) = args.iter().position(|s| s == "webserver") {
+            run_webserver(&args[idx + 1]);
+        } else if args.contains(&"read_client".into()) {
             run_client_read();
-        }
-        else if let Some(idx) = args.iter().position(|s| s == "write_client") {
-            run_client_write(&args[idx+1]);
+        } else if let Some(idx) = args.iter().position(|s| s == "write_client") {
+            run_client_write(&args[idx + 1]);
         }
         return;
     }

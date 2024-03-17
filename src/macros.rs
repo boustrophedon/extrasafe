@@ -19,40 +19,86 @@
 #[macro_export]
 macro_rules! seccomp_arg_filter {
     ($argno:ident <= $value:expr) => {
-        $crate::SeccompArgumentFilter::new(match_argno!($argno), $crate::SeccompilerComparator::Le, $value)
+        $crate::SeccompArgumentFilter::new(
+            match_argno!($argno),
+            $crate::SeccompilerComparator::Le,
+            $value,
+        )
     };
     ($argno:ident < $value:expr) => {
-        $crate::SeccompArgumentFilter::new(match_argno!($argno), $crate::SeccompilerComparator::Lt, $value)
+        $crate::SeccompArgumentFilter::new(
+            match_argno!($argno),
+            $crate::SeccompilerComparator::Lt,
+            $value,
+        )
     };
     ($argno:ident >= $value:expr) => {
-        $crate::SeccompArgumentFilter::new(match_argno!($argno), $crate::SeccompilerComparator::Ge, $value)
+        $crate::SeccompArgumentFilter::new(
+            match_argno!($argno),
+            $crate::SeccompilerComparator::Ge,
+            $value,
+        )
     };
     ($argno:ident > $value:expr) => {
-        $crate::SeccompArgumentFilter::new(match_argno!($argno), $crate::SeccompilerComparator::Gt, $value)
+        $crate::SeccompArgumentFilter::new(
+            match_argno!($argno),
+            $crate::SeccompilerComparator::Gt,
+            $value,
+        )
     };
     ($argno:ident == $value:expr) => {
-        $crate::SeccompArgumentFilter::new(match_argno!($argno), $crate::SeccompilerComparator::Eq, $value)
+        $crate::SeccompArgumentFilter::new(
+            match_argno!($argno),
+            $crate::SeccompilerComparator::Eq,
+            $value,
+        )
     };
     ($argno:ident != $value:expr) => {
-        $crate::SeccompArgumentFilter::new(match_argno!($argno), $crate::SeccompilerComparator::Ne, $value)
+        $crate::SeccompArgumentFilter::new(
+            match_argno!($argno),
+            $crate::SeccompilerComparator::Ne,
+            $value,
+        )
     };
     ($argno:ident & $mask:tt == $value:expr) => {
-        $crate::SeccompArgumentFilter::new(match_argno!($argno), $crate::SeccompilerComparator::MaskedEq($mask), $value)
+        $crate::SeccompArgumentFilter::new(
+            match_argno!($argno),
+            $crate::SeccompilerComparator::MaskedEq($mask),
+            $value,
+        )
     };
-    ($_other:expr) => {compile_error!("usage: `arg[0-5] {<=, <, >=, >, ==, !=} <value>` or `arg[0-5] & <mask> == <value>`")};
+    ($_other:expr) => {
+        compile_error!(
+            "usage: `arg[0-5] {<=, <, >=, >, ==, !=} <value>` or `arg[0-5] & <mask> == <value>`"
+        )
+    };
 }
 
 #[doc(hidden)]
 #[macro_export]
 /// Internal macro for `seccomp_arg_filter!`
 macro_rules! match_argno {
-    (arg0) => {0};
-    (arg1) => {1};
-    (arg2) => {2};
-    (arg3) => {3};
-    (arg4) => {4};
-    (arg5) => {5};
-    ($_other:expr) => {compile_error!("Seccomp argument filters must start with argX where X is 0-5")};
+    (arg0) => {
+        0
+    };
+    (arg1) => {
+        1
+    };
+    (arg2) => {
+        2
+    };
+    (arg3) => {
+        3
+    };
+    (arg4) => {
+        4
+    };
+    (arg5) => {
+        5
+    };
+    ($_other:expr) => {
+        compile_error!("Seccomp argument filters must start with argX where X is 0-5")
+    };
 }
 
 /// These tests just test that the macro expands correctly, not that the comparators do what they

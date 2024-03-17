@@ -13,18 +13,17 @@
 //! See the [`SafetyContext`] struct's documentation and the tests/ and examples/ directories for
 //! more information on how to use it.
 
-
 // Filter is the entire, top-level seccomp filter chain. All SeccompilerRules are or-ed together.
 //  Vec<(i64, Vec<SeccompilerRule>)>, Vec is empty if Rule has no filters.
 // Rule is a syscall + multiple argument filters. All argument filters are and-ed together in a
 // single Rule.
 // ArgumentFilter is a single condition on a single argument
 // Comparator is used in an ArgumentFilter to choose the comparison operation
-pub use seccompiler::SeccompFilter as SeccompilerFilter;
-pub use seccompiler::SeccompRule as SeccompilerRule;
-pub use seccompiler::SeccompCondition as SeccompilerArgumentFilter;
 pub use seccompiler::Error as SeccompilerError;
 pub use seccompiler::SeccompCmpOp as SeccompilerComparator;
+pub use seccompiler::SeccompCondition as SeccompilerArgumentFilter;
+pub use seccompiler::SeccompFilter as SeccompilerFilter;
+pub use seccompiler::SeccompRule as SeccompilerRule;
 
 use seccompiler::SeccompAction;
 
@@ -44,9 +43,9 @@ mod landlock;
 #[cfg(feature = "landlock")]
 pub use landlock::*;
 
+use std::collections::{BTreeMap, HashMap};
 #[cfg(feature = "landlock")]
 use std::path::PathBuf;
-use std::collections::{BTreeMap, HashMap};
 
 #[derive(Debug, Clone, PartialEq)]
 /// A restriction on the arguments of a syscall. May be combined with other
@@ -87,7 +86,11 @@ impl SeccompArgumentFilter {
     #[must_use]
     /// Create a new [`SeccompArgumentFilter`]. You should probably use the [`seccomp_arg_filter!`]
     /// instead.
-    pub fn new(arg_idx: u8, comparator: SeccompilerComparator, value: u64) -> SeccompArgumentFilter {
+    pub fn new(
+        arg_idx: u8,
+        comparator: SeccompilerComparator,
+        value: u64,
+    ) -> SeccompArgumentFilter {
         // TODO: add quirks mode file and check whether syscall's parameter at index `arg_idx` is
         // 32 or 64 bit (and also I guess if it even has that many arguments)
         SeccompArgumentFilter::new64(arg_idx, comparator, value)
@@ -96,7 +99,11 @@ impl SeccompArgumentFilter {
     #[must_use]
     /// Create a new [`SeccompArgumentFilter`] that checks all 64 bits of the provided argument.
     /// You should probably use the [`seccomp_arg_filter!`] instead.
-    pub fn new64(arg_idx: u8, comparator: SeccompilerComparator, value: u64) -> SeccompArgumentFilter {
+    pub fn new64(
+        arg_idx: u8,
+        comparator: SeccompilerComparator,
+        value: u64,
+    ) -> SeccompArgumentFilter {
         SeccompArgumentFilter {
             arg_idx,
             comparator,
@@ -109,7 +116,11 @@ impl SeccompArgumentFilter {
     /// Create a new [`SeccompArgumentFilter`] that checks 32 bits of the provided argument.
     /// You should probably use the [`seccomp_arg_filter!`] instead. See the struct's documentation
     /// for why this is needed.
-    pub fn new32(arg_idx: u8, comparator: SeccompilerComparator, value: u32) -> SeccompArgumentFilter {
+    pub fn new32(
+        arg_idx: u8,
+        comparator: SeccompilerComparator,
+        value: u32,
+    ) -> SeccompArgumentFilter {
         // Note that it doesn't matter if we convert with or without sign extension here since the
         // point is that we'll only compare the least significant 32 bits anyway.
         let value = u64::from(value);
@@ -123,9 +134,17 @@ impl SeccompArgumentFilter {
 
     pub(crate) fn into_seccompiler(self) -> Result<SeccompilerArgumentFilter, ExtraSafeError> {
         use seccompiler::SeccompCmpArgLen;
-        let arg_len = if self.is_64bit { SeccompCmpArgLen::Qword } else { SeccompCmpArgLen::Dword };
-        Ok(SeccompilerArgumentFilter::new(self.arg_idx, arg_len,
-                                       self.comparator, self.value)?)
+        let arg_len = if self.is_64bit {
+            SeccompCmpArgLen::Qword
+        } else {
+            SeccompCmpArgLen::Dword
+        };
+        Ok(SeccompilerArgumentFilter::new(
+            self.arg_idx,
+            arg_len,
+            self.comparator,
+            self.value,
+        )?)
     }
 }
 
@@ -165,8 +184,11 @@ impl SeccompRule {
             return Ok(None);
         }
 
-        let argument_filters: Vec<SeccompilerArgumentFilter> = self.argument_filters.into_iter()
-            .map(SeccompArgumentFilter::into_seccompiler).collect::<Result::<_, ExtraSafeError>>()?;
+        let argument_filters: Vec<SeccompilerArgumentFilter> = self
+            .argument_filters
+            .into_iter()
+            .map(SeccompArgumentFilter::into_seccompiler)
+            .collect::<Result<_, ExtraSafeError>>()?;
 
         Ok(Some(SeccompilerRule::new(argument_filters)?))
     }
@@ -291,13 +313,10 @@ impl SafetyContext {
         let mut rules = rules.conditional_rules();
         for syscall in base_syscalls {
             let rule = SeccompRule::new(syscall);
-            rules.entry(syscall)
-                .or_insert_with(Vec::new)
-                .push(rule);
+            rules.entry(syscall).or_insert_with(Vec::new).push(rule);
         }
 
-        rules.into_values().flatten()
-            .collect()
+        rules.into_values().flatten().collect()
     }
 
     /// Enable the simple and conditional rules provided by the [`RuleSet`].
@@ -317,12 +336,18 @@ impl SafetyContext {
     #[cfg(feature = "landlock")]
     fn enable_landlock_rules<R: RuleSet>(&mut self, policy: &R) -> Result<(), ExtraSafeError> {
         let name = policy.name();
-        let rules = policy.landlock_rules().into_iter()
+        let rules = policy
+            .landlock_rules()
+            .into_iter()
             .map(|rule| (rule.path.clone(), LabeledLandlockRule(name, rule)));
 
         for (path, labeled_rule) in rules {
             if let Some(existing_rule) = self.landlock_rules.get(&path) {
-                return Err(ExtraSafeError::DuplicatePath(path.clone(), existing_rule.0, labeled_rule.0));
+                return Err(ExtraSafeError::DuplicatePath(
+                    path.clone(),
+                    existing_rule.0,
+                    labeled_rule.0,
+                ));
             }
             // value here is always none because we checked above that we're not inserting a path
             // that already exists
@@ -356,8 +381,7 @@ impl SafetyContext {
                             labeled_existing_rule.0,
                             labeled_new_rule.0,
                         ));
-                    }
-                    else if !new_is_simple && existing_is_simple {
+                    } else if !new_is_simple && existing_is_simple {
                         return Err(ExtraSafeError::ConditionalNoEffectError(
                             new_rule.syscall,
                             labeled_new_rule.0,
@@ -525,7 +549,10 @@ impl SafetyContext {
                 // should be allowed without restriction
             }
             let result = rules_map.insert(syscall, seccompiler_rules);
-            assert!(result.is_none(), "extrasafe logic error: somehow inserted the same syscall's rules twice");
+            assert!(
+                result.is_none(),
+                "extrasafe logic error: somehow inserted the same syscall's rules twice"
+            );
         }
 
         #[cfg(not(all(target_arch = "x86_64", target_os = "linux")))]
@@ -535,15 +562,16 @@ impl SafetyContext {
             rules_map,
             SeccompAction::Errno(self.errno),
             SeccompAction::Allow,
-            std::env::consts::ARCH.try_into().expect("invalid arches are prevented above"),
+            std::env::consts::ARCH
+                .try_into()
+                .expect("invalid arches are prevented above"),
         )?;
 
         let bpf_filter: seccompiler::BpfProgram = seccompiler_filter.try_into()?;
 
         if self.all_threads {
             seccompiler::apply_filter_all_threads(&bpf_filter)?;
-        }
-        else {
+        } else {
             seccompiler::apply_filter(&bpf_filter)?;
         }
 
@@ -552,11 +580,11 @@ impl SafetyContext {
 
     #[cfg(feature = "landlock")]
     fn apply_landlock_rules(&self) -> Result<(), ExtraSafeError> {
-	let abi = ABI::V2;
-	let mut landlock_ruleset = Ruleset::default()
+        let abi = ABI::V2;
+        let mut landlock_ruleset = Ruleset::default()
             .set_compatibility(CompatLevel::HardRequirement)
-	    .handle_access(AccessFs::from_all(abi))?
-	    .create()?;
+            .handle_access(AccessFs::from_all(abi))?
+            .create()?;
 
         for LabeledLandlockRule(_policy_name, rule) in self.landlock_rules.values() {
             // If path does not exist or is not accessible, just ignore it
@@ -565,7 +593,7 @@ impl SafetyContext {
                 landlock_ruleset = landlock_ruleset.add_rule(path_beneath)?;
             }
         }
-	let _status = landlock_ruleset.restrict_self();
+        let _status = landlock_ruleset.restrict_self();
         Ok(())
     }
 }

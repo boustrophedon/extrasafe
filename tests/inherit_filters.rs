@@ -1,15 +1,14 @@
 //! Tests that demonstrate seccomp filters are inherited by child processes.
 
-use extrasafe::SafetyContext;
 use extrasafe::builtins::danger_zone::{ForkAndExec, Threads};
+use extrasafe::SafetyContext;
 
 #[test]
 /// Enable seccomp *only on this thread*, create a new thread, try to create a file and check that
 /// it fails.
 fn new_thread_inherits_restrictions() {
     SafetyContext::new()
-        .enable(Threads::nothing()
-            .allow_create())
+        .enable(Threads::nothing().allow_create())
         .unwrap()
         .apply_to_current_thread()
         .unwrap();

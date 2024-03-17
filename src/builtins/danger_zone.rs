@@ -4,7 +4,7 @@ use std::collections::{HashMap, HashSet};
 
 use syscalls::Sysno;
 
-use crate::{SeccompRule, RuleSet};
+use crate::{RuleSet, SeccompRule};
 
 use super::YesReally;
 
@@ -91,10 +91,14 @@ pub struct ForkAndExec;
 impl RuleSet for ForkAndExec {
     fn simple_rules(&self) -> Vec<Sysno> {
         let mut rules = vec![
-             Sysno::fork, Sysno::vfork,
-             Sysno::execve, Sysno::execveat,
-             Sysno::wait4, Sysno::waitid,
-             Sysno::clone, Sysno::clone3,
+            Sysno::fork,
+            Sysno::vfork,
+            Sysno::execve,
+            Sysno::execveat,
+            Sysno::wait4,
+            Sysno::waitid,
+            Sysno::clone,
+            Sysno::clone3,
         ];
 
         // musl creates a pipe when it starts a new process, and fails the operation if it can't

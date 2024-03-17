@@ -16,7 +16,6 @@ use std::thread;
 /// main thread, enable seccomp, send the message and get a response. Then try to bind a new socket
 /// and check that it fails.
 fn test_udp() {
-
     // These block on send until reciever has finished recv.
     let (sender1, recv1) = sync_channel::<()>(0);
 
@@ -47,14 +46,10 @@ fn test_udp() {
 
     // create safetycontext after server and client have been bound.
     SafetyContext::new()
-        .enable(
-            Networking::nothing()
-                .allow_running_udp_sockets()
-        ).unwrap()
-        .enable(
-            Threads::nothing()
-                .allow_create()
-        ).unwrap()
+        .enable(Networking::nothing().allow_running_udp_sockets())
+        .unwrap()
+        .enable(Threads::nothing().allow_create())
+        .unwrap()
         .apply_to_current_thread()
         .unwrap();
 
@@ -115,11 +110,10 @@ fn test_tcp() {
 
     // create safetycontext after server and client have been bound.
     SafetyContext::new()
-        .enable(Networking::nothing()
-            .allow_running_tcp_clients()
-        ).unwrap()
-        .enable(Threads::nothing()
-            .allow_create()).unwrap()
+        .enable(Networking::nothing().allow_running_tcp_clients())
+        .unwrap()
+        .enable(Threads::nothing().allow_create())
+        .unwrap()
         .apply_to_current_thread()
         .unwrap();
 
@@ -152,28 +146,30 @@ fn test_tcp() {
 /// instead open and bind before applying your policy.
 fn test_start_tcp() {
     SafetyContext::new()
-        .enable(
-            Networking::nothing()
-                .allow_start_tcp_servers().yes_really()
-        ).unwrap()
-        .enable(
-            Threads::nothing()
-                .allow_create()
-        ).unwrap()
+        .enable(Networking::nothing().allow_start_tcp_servers().yes_really())
+        .unwrap()
+        .enable(Threads::nothing().allow_create())
+        .unwrap()
         .apply_to_current_thread()
         .unwrap();
     let tcp_res = std::net::TcpListener::bind("127.0.0.1:0");
     assert!(tcp_res.is_ok(), "Failed to bind tcp server");
 
     let udp_res = std::net::UdpSocket::bind("127.0.0.1:0");
-    assert!(udp_res.is_err(), "Incorrectly succeeded in binding udp socket");
+    assert!(
+        udp_res.is_err(),
+        "Incorrectly succeeded in binding udp socket"
+    );
 
     // test ipv6 as well
     let tcp_res = std::net::TcpListener::bind("[::1]:0");
     assert!(tcp_res.is_ok(), "Failed to bind tcp server");
 
     let udp_res = std::net::UdpSocket::bind("[::1]:0");
-    assert!(udp_res.is_err(), "Incorrectly succeeded in binding udp socket");
+    assert!(
+        udp_res.is_err(),
+        "Incorrectly succeeded in binding udp socket"
+    );
 }
 
 #[test]
@@ -181,28 +177,30 @@ fn test_start_tcp() {
 /// instead open and bind before applying your policy.
 fn test_start_udp() {
     SafetyContext::new()
-        .enable(
-            Networking::nothing()
-                .allow_start_udp_servers().yes_really()
-        ).unwrap()
-        .enable(
-            Threads::nothing()
-                .allow_create()
-        ).unwrap()
+        .enable(Networking::nothing().allow_start_udp_servers().yes_really())
+        .unwrap()
+        .enable(Threads::nothing().allow_create())
+        .unwrap()
         .apply_to_current_thread()
         .unwrap();
     let udp_res = std::net::UdpSocket::bind("127.0.0.1:0");
     assert!(udp_res.is_ok(), "Failed to bind udp server");
 
     let udp_res = std::net::TcpListener::bind("127.0.0.1:0");
-    assert!(udp_res.is_err(), "Incorrectly succeeded in binding udp socket");
+    assert!(
+        udp_res.is_err(),
+        "Incorrectly succeeded in binding udp socket"
+    );
 
     // test ipv6 as well
     let udp_res = std::net::UdpSocket::bind("[::1]:0");
     assert!(udp_res.is_ok(), "Failed to bind udp server");
 
     let tcp_res = std::net::TcpListener::bind("[::1]:0");
-    assert!(tcp_res.is_err(), "Incorrectly succeeded in binding tcp socket");
+    assert!(
+        tcp_res.is_err(),
+        "Incorrectly succeeded in binding tcp socket"
+    );
 }
 
 #[test]
@@ -216,12 +214,12 @@ fn test_start_unix() {
     SafetyContext::new()
         .enable(
             Networking::nothing()
-                .allow_start_unix_servers().yes_really()
-        ).unwrap()
-        .enable(
-            Threads::nothing()
-                .allow_create()
-        ).unwrap()
+                .allow_start_unix_servers()
+                .yes_really(),
+        )
+        .unwrap()
+        .enable(Threads::nothing().allow_create())
+        .unwrap()
         .apply_to_current_thread()
         .unwrap();
 
@@ -229,8 +227,14 @@ fn test_start_unix() {
     assert!(unix_res.is_ok(), "Failed to bind tcp server");
 
     let udp_res = std::net::UdpSocket::bind("127.0.0.1:0");
-    assert!(udp_res.is_err(), "Incorrectly succeeded in binding udp socket");
+    assert!(
+        udp_res.is_err(),
+        "Incorrectly succeeded in binding udp socket"
+    );
 
     let tcp_res = std::net::TcpListener::bind("[::1]:0");
-    assert!(tcp_res.is_err(), "Incorrectly succeeded in binding tcp socket");
+    assert!(
+        tcp_res.is_err(),
+        "Incorrectly succeeded in binding tcp socket"
+    );
 }

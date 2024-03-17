@@ -1,10 +1,9 @@
-use std::path::Path;
 use std::fs::File;
 use std::io::{Read, Write};
+use std::path::Path;
 
-use extrasafe::*;
 use builtins::SystemIO;
-
+use extrasafe::*;
 
 // Tests to make sure we don't run into this issue
 // https://github.com/rust-vmm/seccompiler/issues/42
@@ -15,18 +14,20 @@ use builtins::SystemIO;
 fn different_rulesets_same_syscall() {
     SafetyContext::new()
         // First RuleSet: stdout, stderr
-        .enable(SystemIO::nothing()
-            .allow_read()
-            .allow_stdout()
-            .allow_stderr()
-            .allow_metadata()
-        ).unwrap()
         .enable(
-        // Second RuleSet: stderr only
-        SystemIO::nothing()
-            .allow_stderr()
-            .allow_metadata()
-            .allow_close(),
+            SystemIO::nothing()
+                .allow_read()
+                .allow_stdout()
+                .allow_stderr()
+                .allow_metadata(),
+        )
+        .unwrap()
+        .enable(
+            // Second RuleSet: stderr only
+            SystemIO::nothing()
+                .allow_stderr()
+                .allow_metadata()
+                .allow_close(),
         )
         .unwrap()
         .apply_to_current_thread()
@@ -34,9 +35,17 @@ fn different_rulesets_same_syscall() {
 
     // Try to write to stdout and stderr
     let res = writeln!(std::io::stdout(), "we can print to stdout");
-    assert!(res.is_ok(), "failed to write to stdout: {:?}", res.unwrap_err());
+    assert!(
+        res.is_ok(),
+        "failed to write to stdout: {:?}",
+        res.unwrap_err()
+    );
     let res = writeln!(std::io::stderr(), "we can print to stderr");
-    assert!(res.is_ok(), "failed to write to stderr: {:?}", res.unwrap_err());
+    assert!(
+        res.is_ok(),
+        "failed to write to stderr: {:?}",
+        res.unwrap_err()
+    );
 }
 
 fn create_testfile(path: &Path, filename: &str) -> File {
@@ -50,7 +59,6 @@ fn create_testfile(path: &Path, filename: &str) -> File {
     // reopen for reading
     File::open(&path).unwrap()
 }
-
 
 #[test]
 /// Same as above but with mask instead of == and also 3 rulesets
@@ -68,19 +76,14 @@ fn different_rulesets_same_syscall2() {
 
     // Add three different rulesets each allowing reads to a different file
     SafetyContext::new()
-        .enable(SystemIO::nothing()
-            .allow_stdout()
-            .allow_stderr()
-        ).unwrap()
-        .enable(SystemIO::nothing()
-            .allow_file_read(&file1)
-        ).unwrap()
-        .enable(SystemIO::nothing()
-            .allow_file_read(&file2)
-        ).unwrap()
-        .enable(SystemIO::nothing()
-            .allow_file_read(&file3)
-        ).unwrap()
+        .enable(SystemIO::nothing().allow_stdout().allow_stderr())
+        .unwrap()
+        .enable(SystemIO::nothing().allow_file_read(&file1))
+        .unwrap()
+        .enable(SystemIO::nothing().allow_file_read(&file2))
+        .unwrap()
+        .enable(SystemIO::nothing().allow_file_read(&file3))
+        .unwrap()
         .apply_to_current_thread()
         .unwrap();
 
