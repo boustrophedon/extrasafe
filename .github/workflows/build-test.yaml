@@ -35,7 +35,7 @@ jobs:
         run: sudo apt-get install musl-tools
       - name: Install cross-compilation dependencies
         if: ${{ contains(matrix.target-triple, 'aarch64') }}
-        run: apt-get install libc6-dev-arm64-cross gcc-aarch64-linux-gnu
+        run: sudo apt-get install libc6-dev-arm64-cross gcc-aarch64-linux-gnu
       - name: Install target triple
         run: rustup target install ${{ matrix.target-triple }}
       - name: Set up QEMU
