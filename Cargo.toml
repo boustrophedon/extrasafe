@@ -33,8 +33,7 @@ rusqlite = "^0.26"
 reqwest = { version = "^0.11", default-features = false, features = ["rustls-tls"] }
 
 [target.'cfg(all(not(target_env = "musl"), target_arch = "aarch64"))'.dev-dependencies]
-reqwest = { version = "^0.11" }
-openssl-sys = {  version = "0.9.101", features = ["openssl-src"] }
+reqwest = { version = "^0.11", features = ["native-tls-vendored"] }
 
 [target.'cfg(not(any(target_env = "musl", target_arch = "aarch64")))'.dev-dependencies]
 reqwest = { version = "^0.11" }
