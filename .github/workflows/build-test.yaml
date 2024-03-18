@@ -29,15 +29,17 @@ jobs:
           - x86_64-unknown-linux-musl
           - aarch64-unknown-linux-gnu
           - aarch64-unknown-linux-musl
-          - riscv64gc-unknown-linux-gnu
-          - riscv64gc-unknown-linux-musl
     steps:
       - name: Install musl lib
         if: ${{ contains(matrix.target-triple, 'musl') }}
         run: sudo apt-get install musl-tools
+      - name: Install cross-compilation dependencies
+        if: ${{ contains(matrix.target-triple, 'aarch64') }}
+        run: apt-get install libc6-dev-arm64-cross gcc-aarch64-linux-gnu
       - name: Install target triple
         run: rustup target install ${{ matrix.target-triple }}
       - name: Set up QEMU
+        if: ${{ contains(matrix.target-triple, 'aarch64') }}
         uses: docker/setup-qemu-action@v3
       - name: Checkout
         uses: actions/checkout@v4
