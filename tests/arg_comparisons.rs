@@ -3,7 +3,7 @@
 
 use extrasafe::*;
 use builtins::SystemIO;
-use extrasafe::syscalls::Sysno;
+use syscalls::Sysno;
 
 use std::collections::HashMap;
 
