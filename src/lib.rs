@@ -28,7 +28,7 @@ pub use seccompiler::SeccompCmpOp as SeccompilerComparator;
 
 use seccompiler::SeccompAction;
 
-pub mod syscalls;
+pub use syscalls;
 
 pub mod error;
 pub use error::*;
@@ -180,11 +180,11 @@ struct LabeledSeccompRule(pub &'static str, pub SeccompRule);
 /// functionality, such as opening files or starting threads.
 pub trait RuleSet {
     /// A simple rule is a seccomp rule that just allows the syscall without restriction.
-    fn simple_rules(&self) -> Vec<crate::syscalls::Sysno>;
+    fn simple_rules(&self) -> Vec<syscalls::Sysno>;
 
     /// A conditional rule is a seccomp rule that uses a condition to restrict the syscall, e.g. only
     /// specific flags as parameters.
-    fn conditional_rules(&self) -> HashMap<crate::syscalls::Sysno, Vec<SeccompRule>> {
+    fn conditional_rules(&self) -> HashMap<syscalls::Sysno, Vec<SeccompRule>> {
         HashMap::new()
     }
 
@@ -528,8 +528,8 @@ impl SafetyContext {
             assert!(result.is_none(), "extrasafe logic error: somehow inserted the same syscall's rules twice");
         }
 
-        #[cfg(not(target_os = "linux"))]
-        compile_error!("extrasafe is currently only supported on linux");
+        #[cfg(not(all(target_os = "linux", any(target_arch = "aarch64", target_arch = "x86_64"))))]
+        compile_error!("extrasafe is currently only supported on arm64 and amd64 linux");
 
         let seccompiler_filter = SeccompilerFilter::new(
             rules_map,

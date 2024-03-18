@@ -7,7 +7,7 @@ use std::os::unix::io::AsRawFd;
 #[cfg(feature = "landlock")]
 use std::path::{Path, PathBuf};
 
-use crate::syscalls::Sysno;
+use syscalls::Sysno;
 
 #[cfg(feature = "landlock")]
 use crate::LandlockRule;
@@ -36,7 +36,7 @@ pub(crate) const IO_WRITE_SYSCALLS: &[Sysno] = &[
     Sysno::lseek,
 ];
 pub(crate) const IO_OPEN_SYSCALLS: &[Sysno] = &[
-    #[cfg(enabled_arch = "x86_64")]
+    #[cfg(target_arch = "x86_64")]
     Sysno::open,
     Sysno::openat,
     Sysno::openat2
@@ -44,24 +44,24 @@ pub(crate) const IO_OPEN_SYSCALLS: &[Sysno] = &[
 pub(crate) const IO_IOCTL_SYSCALLS: &[Sysno] = &[Sysno::ioctl, Sysno::fcntl];
 // TODO: may want to separate fd-based and filename-based?
 pub(crate) const IO_METADATA_SYSCALLS: &[Sysno] = &[
-    #[cfg(enabled_arch = "x86_64")]
+    #[cfg(target_arch = "x86_64")]
     Sysno::stat,
     Sysno::fstat,
-    #[cfg(enabled_arch = "x86_64")]
+    #[cfg(target_arch = "x86_64")]
     Sysno::newfstatat,
-    #[cfg(any(enabled_arch = "aarch64", enabled_arch = "riscv64"))]
+    #[cfg(any(target_arch = "aarch64", target_arch = "riscv64"))]
     Sysno::fstatat,
-    #[cfg(enabled_arch = "x86_64")]
+    #[cfg(target_arch = "x86_64")]
     Sysno::lstat,
     Sysno::statx,
-    #[cfg(enabled_arch = "x86_64")]
+    #[cfg(target_arch = "x86_64")]
     Sysno::getdents,
     Sysno::getdents64,
     Sysno::getcwd,
 ];
 pub(crate) const IO_CLOSE_SYSCALLS: &[Sysno] = &[Sysno::close, Sysno::close_range];
 pub(crate) const IO_UNLINK_SYSCALLS: &[Sysno] = &[
-    #[cfg(enabled_arch = "x86_64")]
+    #[cfg(target_arch = "x86_64")]
     Sysno::unlink,
     Sysno::unlinkat
 ];
@@ -161,7 +161,7 @@ impl SystemIO {
         const WRITECREATE: u64 = O_WRONLY | O_RDWR | O_APPEND | O_CREAT | O_EXCL;// | O_TMPFILE;
 
         // flags are the second argument for open but the third for openat
-        #[cfg(enabled_arch = "x86_64")]
+        #[cfg(target_arch = "x86_64")]
         {
             let rule = SeccompRule::new(Sysno::open)
                 .and_condition(seccomp_arg_filter!(arg1 & WRITECREATE == 0));
@@ -282,11 +282,11 @@ impl SystemIO {
 }
 
 impl RuleSet for SystemIO {
-    fn simple_rules(&self) -> Vec<crate::syscalls::Sysno> {
+    fn simple_rules(&self) -> Vec<syscalls::Sysno> {
         self.allowed.iter().copied().collect()
     }
 
-    fn conditional_rules(&self) -> HashMap<crate::syscalls::Sysno, Vec<SeccompRule>> {
+    fn conditional_rules(&self) -> HashMap<syscalls::Sysno, Vec<SeccompRule>> {
         self.custom.clone()
     }
 

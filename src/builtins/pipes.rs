@@ -9,7 +9,7 @@ pub struct Pipes;
 impl RuleSet for Pipes {
     fn simple_rules(&self) -> Vec<Sysno> {
         vec![
-            #[cfg(enabled_arch = "x86_64")]
+            #[cfg(target_arch = "x86_64")]
             Sysno::pipe,
             Sysno::pipe2
         ]

@@ -11,9 +11,6 @@ categories = ["os::linux-apis"]
 
 [features]
 landlock = ["dep:landlock"]
-aarch64 = ["syscalls/aarch64"]
-x86_64 = ["syscalls/x86_64"]
-riscv64 = ["syscalls/riscv64"]
 
 [dependencies]
 seccompiler = { version = "^0.4", default-features = false }

@@ -3,7 +3,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use crate::syscalls::Sysno;
+use syscalls::Sysno;
 
 use crate::{SeccompRule, RuleSet};
 
