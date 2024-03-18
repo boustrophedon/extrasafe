@@ -356,6 +356,8 @@ impl SystemIO {
         self.insert_flags(path, new_flags);
 
         // allow relevant syscalls as well
+        // creat only exists on x86-64, aarch64 uses O_CREAT with open
+        #[cfg(target_arch = "x86_64")]
         self.allowed.extend(&[Sysno::creat]);
         self.allow_open().yes_really()
     }
@@ -391,7 +393,11 @@ impl SystemIO {
         self.insert_flags(path, new_flags);
 
         // allow relevant syscalls as well
-        self.allowed.extend(&[Sysno::unlink, Sysno::unlinkat]);
+        self.allowed.extend(&[
+            #[cfg(target_arch = "x86_64")]
+            Sysno::unlink,
+            Sysno::unlinkat
+        ]);
         self
     }
 
@@ -410,7 +416,11 @@ impl SystemIO {
         // allow relevant syscalls as well
         // unlinkat may be be used to remove directories as well so we include it here, since files
         // will be protected by landlock anyway.
-        self.allowed.extend(&[Sysno::rmdir, Sysno::unlinkat]);
+        self.allowed.extend(&[
+            #[cfg(target_arch = "x86_64")]
+            Sysno::rmdir,
+            Sysno::unlinkat
+        ]);
         self
     }
 }

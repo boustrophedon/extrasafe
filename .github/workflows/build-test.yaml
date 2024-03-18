@@ -36,9 +36,6 @@ jobs:
       - name: Install cross-compilation dependencies (GNU)
         if: ${{ contains(matrix.target-triple, 'aarch64') && contains(matrix.target-triple, 'gnu') }}
         run: sudo apt-get install libc6-dev-arm64-cross gcc-aarch64-linux-gnu
-      - name: Install cross-compilation dependencies (musl)
-        if: ${{ contains(matrix.target-triple, 'aarch64') && contains(matrix.target-triple, 'musl') }}
-        run: sudo apt-get install libc6-dev-arm64-cross gcc-aarch64-linux-musl
       - name: Install target triple
         run: rustup target install ${{ matrix.target-triple }}
       - name: Set up QEMU
