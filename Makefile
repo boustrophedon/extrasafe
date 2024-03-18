@@ -7,12 +7,12 @@ test:
 
 # Run all tests with and without all features
 test-ci:
-	cargo test --target=$(TARGET_TRIPLE) --tests --examples --feature=landlock
+	cargo test --target=$(TARGET_TRIPLE) --tests --examples --all-features
 	cargo test --target=$(TARGET_TRIPLE) --tests --examples --no-default-features
 
 # Run clippy
 lint:
-	cargo clippy --no-deps --all-targets --feature=landlock -- -W clippy::pedantic \
+	cargo clippy --no-deps --all-targets --all-features -- -W clippy::pedantic \
 		-A clippy::let-unit-value \
 		-A clippy::wildcard-imports \
 		-A clippy::module-name-repetitions \
@@ -24,8 +24,8 @@ doc:
 
 # Compute test coverage for CI with llvm-cov
 coverage-ci:
-	cargo llvm-cov --tests --examples --all-targets --feature=landlock --workspace --lcov --output-path lcov.info
+	cargo llvm-cov --tests --examples --all-targets --all-features --workspace --lcov --output-path lcov.info
 
 # Compute test coverage with HTML output
 coverage:
-	cargo llvm-cov --tests --examples --all-targets --feature=landlock --workspace --html
+	cargo llvm-cov --tests --examples --all-targets --all-features --workspace --html
