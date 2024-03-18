@@ -382,7 +382,11 @@ impl SystemIO {
         self.insert_flags(path, new_flags);
 
         // allow relevant syscalls as well
-        self.allowed.extend(&[Sysno::mkdir, Sysno::mkdirat]);
+        self.allowed.extend(&[
+            #[cfg(target_arch = "x86_64")]
+            Sysno::mkdir,
+            Sysno::mkdirat
+        ]);
         self
     }
 
