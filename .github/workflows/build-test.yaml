@@ -36,8 +36,8 @@ jobs:
         uses: actions/checkout@v4
       - name: Run tests
         run: |
-          cross test --target${{ matrix.target-triple }} --tests --examples --all-features
-          cross test --target${{ matrix.target-triple }} --tests --examples --no-default-features
+          cross test --target ${{ matrix.target-triple }} --tests --examples --all-features
+          cross test --target ${{ matrix.target-triple }} --tests --examples --no-default-features
 
   doc:
     name: Documentation Check
