@@ -54,7 +54,7 @@ jobs:
         run: make test-ci TARGET_TRIPLE=${{ matrix.target-triple }}
       - name: Run tests (arm64)
         if: ${{ contains(matrix.target-triple, 'aarch64') }}
-        run: RUSTFLAGS="-C link-arg=-fuse-ld=lld" make test-ci TARGET_TRIPLE=${{ matrix.target-triple }}
+        run: RUSTFLAGS="-C link-arg=-fuse-ld=/usr/aarch64-linux-gnu/bin/ld" make test-ci TARGET_TRIPLE=${{ matrix.target-triple }}
 
   doc:
     name: Documentation Check
