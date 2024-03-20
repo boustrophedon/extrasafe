@@ -3,9 +3,7 @@
 
 use std::collections::HashMap;
 
-use syscalls::Sysno;
-
-use crate::{SeccompRule, RuleSet};
+use crate::{SeccompRule, RuleSet, syscalls::Sysno};
 
 /// A [`RuleSet`] allowing basic required syscalls to do things like allocate memory, and also a few that are used by
 /// Rust to set up panic handling and segfault handlers.
@@ -44,7 +42,9 @@ impl RuleSet for BasicCapabilities {
 
             // Readlink isn't dangerous because you still need to be able to open the file to do
             // anything with the resolved name.
+            #[cfg(target_arch = "x86_64")]
             Sysno::readlink,
+            Sysno::readlinkat,
 
             // Getpid/tid is fine.
             Sysno::getpid,

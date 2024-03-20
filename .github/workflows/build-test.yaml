@@ -24,17 +24,20 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target-triple: [x86_64-unknown-linux-gnu, x86_64-unknown-linux-musl]
+        target-triple:
+          - x86_64-unknown-linux-gnu
+          - x86_64-unknown-linux-musl
+          - aarch64-unknown-linux-gnu
+          - aarch64-unknown-linux-musl
     steps:
-      - name: Install musl lib
-        if: ${{ contains(matrix.target-triple, 'musl') }}
-        run: sudo apt-get install musl-tools
-      - name: Install target triple
-        run: rustup target install ${{ matrix.target-triple }}
+      - name: Install cross tools
+        run: cargo install cross --git https://github.com/cross-rs/cross
       - name: Checkout
         uses: actions/checkout@v4
       - name: Run tests
-        run: make test-ci TARGET_TRIPLE=${{ matrix.target-triple }}
+        run: |
+          cross test --target ${{ matrix.target-triple }} --tests --examples --all-features
+          cross test --target ${{ matrix.target-triple }} --tests --examples --no-default-features
 
   doc:
     name: Documentation Check

@@ -17,18 +17,54 @@ use crate::landlock::{access, AccessFs, BitFlags};
 use crate::{RuleSet, SeccompRule};
 use super::YesReally;
 
-pub(crate) const IO_READ_SYSCALLS: &[Sysno] = &[Sysno::read, Sysno::readv, Sysno::preadv, Sysno::preadv2, Sysno::pread64, Sysno::lseek];
-pub(crate) const IO_WRITE_SYSCALLS: &[Sysno] = &[Sysno::write, Sysno::writev, Sysno::pwritev, Sysno::pwritev2, Sysno::pwrite64,
-                                      Sysno::fsync, Sysno::fdatasync, Sysno::lseek];
-pub(crate) const IO_OPEN_SYSCALLS: &[Sysno] = &[Sysno::open, Sysno::openat, Sysno::openat2];
+pub(crate) const IO_READ_SYSCALLS: &[Sysno] = &[
+    Sysno::read,
+    Sysno::readv,
+    Sysno::preadv,
+    Sysno::preadv2,
+    Sysno::pread64,
+    Sysno::lseek,
+];
+pub(crate) const IO_WRITE_SYSCALLS: &[Sysno] = &[
+    Sysno::write,
+    Sysno::writev,
+    Sysno::pwritev,
+    Sysno::pwritev2,
+    Sysno::pwrite64,
+    Sysno::fsync,
+    Sysno::fdatasync,
+    Sysno::lseek,
+];
+pub(crate) const IO_OPEN_SYSCALLS: &[Sysno] = &[
+    #[cfg(target_arch = "x86_64")]
+    Sysno::open,
+    Sysno::openat,
+    Sysno::openat2
+];
 pub(crate) const IO_IOCTL_SYSCALLS: &[Sysno] = &[Sysno::ioctl, Sysno::fcntl];
 // TODO: may want to separate fd-based and filename-based?
-pub(crate) const IO_METADATA_SYSCALLS: &[Sysno] = &[Sysno::stat, Sysno::fstat, Sysno::newfstatat,
-                                         Sysno::lstat, Sysno::statx,
-                                         Sysno::getdents, Sysno::getdents64,
-                                         Sysno::getcwd];
+pub(crate) const IO_METADATA_SYSCALLS: &[Sysno] = &[
+    #[cfg(target_arch = "x86_64")]
+    Sysno::stat,
+    Sysno::fstat,
+    #[cfg(target_arch = "x86_64")]
+    Sysno::newfstatat,
+    #[cfg(any(target_arch = "aarch64", target_arch = "riscv64"))]
+    Sysno::fstatat,
+    #[cfg(target_arch = "x86_64")]
+    Sysno::lstat,
+    Sysno::statx,
+    #[cfg(target_arch = "x86_64")]
+    Sysno::getdents,
+    Sysno::getdents64,
+    Sysno::getcwd,
+];
 pub(crate) const IO_CLOSE_SYSCALLS: &[Sysno] = &[Sysno::close, Sysno::close_range];
-pub(crate) const IO_UNLINK_SYSCALLS: &[Sysno] = &[Sysno::unlink, Sysno::unlinkat];
+pub(crate) const IO_UNLINK_SYSCALLS: &[Sysno] = &[
+    #[cfg(target_arch = "x86_64")]
+    Sysno::unlink,
+    Sysno::unlinkat
+];
 
 // TODO: split into SystemIO, SystemIOLandlock, SystemIOSeccompRestricted so that you can't call a
 // landlock function after using a seccomp argument filter function (or vice versa). You can still
@@ -125,11 +161,14 @@ impl SystemIO {
         const WRITECREATE: u64 = O_WRONLY | O_RDWR | O_APPEND | O_CREAT | O_EXCL;// | O_TMPFILE;
 
         // flags are the second argument for open but the third for openat
-        let rule = SeccompRule::new(Sysno::open)
-            .and_condition(seccomp_arg_filter!(arg1 & WRITECREATE == 0));
-        self.custom.entry(Sysno::open)
-            .or_insert_with(Vec::new)
-            .push(rule);
+        #[cfg(target_arch = "x86_64")]
+        {
+            let rule = SeccompRule::new(Sysno::open)
+                .and_condition(seccomp_arg_filter!(arg1 & WRITECREATE == 0));
+            self.custom.entry(Sysno::open)
+                .or_insert_with(Vec::new)
+                .push(rule);
+        }
 
         let rule = SeccompRule::new(Sysno::openat)
             .and_condition(seccomp_arg_filter!(arg2 & WRITECREATE == 0));
@@ -317,6 +356,8 @@ impl SystemIO {
         self.insert_flags(path, new_flags);
 
         // allow relevant syscalls as well
+        // creat only exists on x86-64, aarch64 uses O_CREAT with open
+        #[cfg(target_arch = "x86_64")]
         self.allowed.extend(&[Sysno::creat]);
         self.allow_open().yes_really()
     }
@@ -341,7 +382,11 @@ impl SystemIO {
         self.insert_flags(path, new_flags);
 
         // allow relevant syscalls as well
-        self.allowed.extend(&[Sysno::mkdir, Sysno::mkdirat]);
+        self.allowed.extend(&[
+            #[cfg(target_arch = "x86_64")]
+            Sysno::mkdir,
+            Sysno::mkdirat
+        ]);
         self
     }
 
@@ -352,7 +397,11 @@ impl SystemIO {
         self.insert_flags(path, new_flags);
 
         // allow relevant syscalls as well
-        self.allowed.extend(&[Sysno::unlink, Sysno::unlinkat]);
+        self.allowed.extend(&[
+            #[cfg(target_arch = "x86_64")]
+            Sysno::unlink,
+            Sysno::unlinkat
+        ]);
         self
     }
 
@@ -371,7 +420,11 @@ impl SystemIO {
         // allow relevant syscalls as well
         // unlinkat may be be used to remove directories as well so we include it here, since files
         // will be protected by landlock anyway.
-        self.allowed.extend(&[Sysno::rmdir, Sysno::unlinkat]);
+        self.allowed.extend(&[
+            #[cfg(target_arch = "x86_64")]
+            Sysno::rmdir,
+            Sysno::unlinkat
+        ]);
         self
     }
 }
