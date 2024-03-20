@@ -36,6 +36,9 @@ jobs:
       - name: Install cross-compilation dependencies (GNU)
         if: ${{ contains(matrix.target-triple, 'aarch64') && contains(matrix.target-triple, 'gnu') }}
         run: sudo apt-get install libc6-dev-arm64-cross gcc-aarch64-linux-gnu
+      - name: Install arm64 linker
+        if: ${{ contains(matrix.target-triple, 'aarch64') }}
+        run: sudo apt-get install binutils-aarch64-linux-gnu
       - name: Install target triple
         run: rustup target install ${{ matrix.target-triple }}
       - name: Set up QEMU
@@ -43,8 +46,12 @@ jobs:
         uses: docker/setup-qemu-action@v3
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Run tests
+      - name: Run tests (x86_64)
+        if: ${{ contains(matrix.target-triple, 'x86_64') }}
         run: make test-ci TARGET_TRIPLE=${{ matrix.target-triple }}
+      - name: Run tests (arm64)
+        if: ${{ contains(matrix.target-triple, 'aarch64') }}
+        run: RUSTFLAGS="-C link-arg=-fuse-ld=rust-lld" make test-ci TARGET_TRIPLE=${{ matrix.target-triple }}
 
   doc:
     name: Documentation Check
