@@ -30,31 +30,14 @@ jobs:
           - aarch64-unknown-linux-gnu
           - aarch64-unknown-linux-musl
     steps:
-      - name: Install musl lib
-        if: ${{ contains(matrix.target-triple, 'musl') }}
-        run: sudo apt-get install musl-tools
-      - name: Install cross-compilation dependencies (GNU)
-        if: ${{ contains(matrix.target-triple, 'aarch64') && contains(matrix.target-triple, 'gnu') }}
-        run: sudo apt-get install libc6-dev-arm64-cross gcc-aarch64-linux-gnu
-      - name: Install cross-compilation dependencies (muskl)
-        if: ${{ contains(matrix.target-triple, 'aarch64') && contains(matrix.target-triple, 'gnu') }}
-        run: sudo apt-get install libc6-dev-arm64-cross gcc-aarch64-linux-gnu
-      - name: Install arm64 linker
-        if: ${{ contains(matrix.target-triple, 'aarch64') }}
-        run: sudo apt-get install binutils-aarch64-linux-gnu
-      - name: Install target triple
-        run: rustup target install ${{ matrix.target-triple }}
-      - name: Set up QEMU
-        if: ${{ contains(matrix.target-triple, 'aarch64') }}
-        uses: docker/setup-qemu-action@v3
+      - name: Install cross tools
+        run: cargo install cross --git https://github.com/cross-rs/cross
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Run tests (x86_64)
-        if: ${{ contains(matrix.target-triple, 'x86_64') }}
-        run: make test-ci TARGET_TRIPLE=${{ matrix.target-triple }}
-      - name: Run tests (arm64)
-        if: ${{ contains(matrix.target-triple, 'aarch64') }}
-        run: RUSTFLAGS="-C link-arg=-fuse-ld=/usr/aarch64-linux-gnu/bin/ld" make test-ci TARGET_TRIPLE=${{ matrix.target-triple }}
+      - name: Run tests
+        run: |
+          cross test --target${{ matrix.target-triple }} --tests --examples --all-features
+          cross test --target${{ matrix.target-triple }} --tests --examples --no-default-features
 
   doc:
     name: Documentation Check
