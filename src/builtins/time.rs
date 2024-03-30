@@ -1,11 +1,11 @@
 //! Contains a [`RuleSet`] for allowing time-related syscalls, but check the comments for why you
 //! probably don't actually need to enable them.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 use syscalls::Sysno;
 
-use crate::{SeccompRule, RuleSet};
+use crate::RuleSet;
 
 #[must_use]
 /// Enable syscalls related to time.
