@@ -206,3 +206,63 @@ It's also a bit hard to create your own RuleSets with landlock rules because the
 Relatedly, we also enable possibly more syscalls than are strictly necessary (e.g. ioctl and fcntl) when enabling landlock since we're currently just using the existing pre-defined groups in SystemIO.
 
 `SafetyContext::apply_to_all_threads` does not work with landlock. However, landlock is inherited by child threads and processes like seccomp.
+
+## Isolates
+
+Extrasafe `Isolates` are a easy to use wrapper around Linux [user namespaces](https://man7.org/linux/man-pages/man7/user_namespaces.7.html). Namespaces are most widely used in unprivileged container runtimes inside Podman and Docker, and can also be found in programs like bubblewrap and firejail. Extrasafe Isolates can be enabled with the `isolate` feature.
+
+There are a variety of [namespace types](https://man7.org/linux/man-pages/man7/namespaces.7.html) but the most relevant for extrasafe are mount, network, PID, and user namespaces. By using an extrasafe Isolate, you can isolate your program both from the rest of the network and the rest of the filesystem.
+
+In detail, starting an `extrasafe::Isolate` in your code will launch a subprocess by re-running the current process's executable (via the standard `std::process::Command` interface) with a different set of arguments, which then gets recognized by a piece of code the user adds to their `main()` function. The `Isolate::main_hook` function will then internally call the `clone` syscall to enter a new namespace, and then perform setup that mounts a new, private temporary filesystem and mounts user-specified directories into it, sets it as the new root filesystem with [`pivot_root`](https://man7.org/linux/man-pages/man2/pivot_root.2.html), and unmounts the old root filesystem. This all happens without affecting anything in the parent namespace, much in the same way that a container runtime does.
+
+By default, there's no communication channel between the parent namespace and the child, but by bindmounting Unix sockets or electing not to isolate the network namespace, the parent process can communicate with an Isolate. Environment variables can be passed into the Isolate to provide initial configuration.
+
+Here's a minimal example using most of the features except for keeping the parent network:
+
+```rust
+use extrasafe::isolate::Isolate;
+use std::collections::HashMap;
+use std::path::PathBuf;
+
+const EXAMPLE_ISOLATE: &str = "user guide isolate";
+
+/// The function that ultimately runs inside the Isolate
+fn do_cool_thing() {
+    println!("I'm going to read some files from /cooldir and do cool stuff with it!");
+    // TODO: do cool stuff with the files in /cooldir
+}
+
+/// Isolate configuration that happens when the program is re-executed after `Isolate::run`
+fn setup_isolate(name: &'static str) -> Isolate {
+    let path = std::env::var("COOL_DIRECTORY").unwrap();
+    let path = PathBuf::from(path);
+    Isolate::new(name, do_cool_thing)
+        // This will mount /a/b/c from the parent into /cooldir in the child,
+        // but not until after entering the namespace.
+        .add_bind_mount(path, "/cooldir")
+        // Limit the amount of data that can be written to the filesystem the
+        // Isolate lives in.
+        .set_rootfs_size(1)
+}
+
+fn main() {
+    // Once the Isolate::run call is made, this will run the setup function,
+    // enter the namespace and call the the function provided. The first time the program runs,
+    // this code will be ignored.
+    Isolate::main_hook(EXAMPLE_ISOLATE, setup_isolate);
+
+    // ... somewhere later in the program
+
+    let env_vars = HashMap::from([("COOL_DIRECTORY".to_string(), "/".to_string())]);
+
+    // `Isolate::run` returns a normal `std::process::Output`
+    let output = Isolate::run(EXAMPLE_ISOLATE, &env_vars).unwrap();
+
+    assert!(output.status.success());
+    println!("stdout: {}", String::from_utf8_lossy(&output.stdout));
+}
+```
+
+One thing to note is that the name passed to `Isolate::run` and `Isolate::main_hook` must be the same or your program will not enter the Isolate after re-execing.
+
+It's also difficult to test `Isolate`s currently because they interact poorly with the builtin testing framework, but I will be prototyping new ways to test Isolates. Currently the above code isn't in `examples/user-guide.rs` for that reason, it's in a separate `examples/user_guide_isolate.rs` file.
