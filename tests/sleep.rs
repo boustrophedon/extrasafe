@@ -1,7 +1,8 @@
 use extrasafe::builtins::{SystemIO, danger_zone::Threads};
 
 #[test]
-#[should_panic]
+// assert is just unhelpful assert_eq message
+#[should_panic(expected = "assertion")]
 fn insomnia() {
     extrasafe::SafetyContext::new()
         .enable(SystemIO::nothing()
