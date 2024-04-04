@@ -1,5 +1,11 @@
-unreleased
-----------
+0.5.0
+-----
+- Add `Isolate` feature for using unprivileged namespaces
+  - Use `Isolate::run` inside your normal code to start the isolate
+  - Use `Isolate::main_hook` at the beginning of main to actually run the isolate upon re-exec
+  - This feature significantly drops code coverage because llvm-cov can't write
+    out coverage data from within an isolate. The code is still being covered
+    by tests in `examples/isolate_test.rs`.
 - Add default implementation for `RuleSet::conditional_rules`
 - impl RuleSet for `syscalls::Sysno` for easier ad-hoc rulesets
 - Use generics instead of impl Trait in public functions to allow turbofish usage
