@@ -1,3 +1,6 @@
+unreleased
+----------
+
 0.5.0
 -----
 - Add `Isolate` feature for using unprivileged namespaces
