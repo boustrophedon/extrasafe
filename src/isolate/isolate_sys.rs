@@ -18,6 +18,7 @@ use std::ffi::CString;
 use super::IsolateError;
 use std::io::Write;
 use std::os::fd::FromRawFd;
+use std::os::raw::c_char;
 
 use std::collections::HashMap;
 
@@ -142,7 +143,7 @@ pub fn make_tempdir(isolate_name: &str) -> PathBuf {
     let template_str = format!("/tmp/{}.XXXXXX\0", isolate_name);
     let mut dir_buf: Vec<u8> = template_str.clone().into_bytes();
 
-    let dir_ptr: *mut i8 = dir_buf.as_mut_ptr().cast::<i8>();
+    let dir_ptr: *mut c_char = dir_buf.as_mut_ptr().cast::<c_char>();
     let ret = unsafe { libc::mkdtemp(dir_ptr) };
     fail_null!(ret, "failed to create temporary directory after clone");
 
