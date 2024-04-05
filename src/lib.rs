@@ -35,7 +35,6 @@ pub use error::*;
 
 #[macro_use]
 pub mod macros;
-pub use macros::*;
 
 pub mod builtins;
 
@@ -43,6 +42,9 @@ pub mod builtins;
 mod landlock;
 #[cfg(feature = "landlock")]
 pub use landlock::*;
+
+#[cfg(feature = "isolate")]
+pub mod isolate;
 
 #[cfg(feature = "landlock")]
 use std::path::PathBuf;

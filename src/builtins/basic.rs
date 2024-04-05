@@ -1,9 +1,9 @@
 //! Contains a [`RuleSet`] for allowing base syscalls that all programs will need, and are not
 //! dangerous for the most part.
 
-use std::collections::HashMap;
+use syscalls::Sysno;
 
-use crate::{SeccompRule, RuleSet, syscalls::Sysno};
+use crate::RuleSet;
 
 /// A [`RuleSet`] allowing basic required syscalls to do things like allocate memory, and also a few that are used by
 /// Rust to set up panic handling and segfault handlers.

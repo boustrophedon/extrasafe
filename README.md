@@ -2,8 +2,6 @@
 
 [![Coverage Status](https://coveralls.io/repos/github/boustrophedon/extrasafe/badge.svg?branch=master)](https://coveralls.io/github/boustrophedon/extrasafe?branch=master) [![CI Status](https://github.com/boustrophedon/extrasafe/actions/workflows/build-test.yaml/badge.svg)](https://github.com/boustrophedon/extrasafe/actions/workflows/build-test.yaml) [![crates.io](https://img.shields.io/crates/v/extrasafe)](https://crates.io/crates/extrasafe) [![docs.rs](https://img.shields.io/docsrs/extrasafe)](https://docs.rs/extrasafe/latest/extrasafe/)
 
-*"trust noone not even urself" - internet man*
-
 ```rust
 fn main() {
     println!("disabling syscalls...");
@@ -27,7 +25,7 @@ fn main() {
 
 You've used safe and unsafe Rust: now your code can be extrasafe.
 
-extrasafe is a wrapper around [the Linux kernel's seccomp](https://www.kernel.org/doc/html/latest/userspace-api/seccomp_filter.html) syscall-filtering functionality to prevent your program from calling syscalls you don't need, with support for [the Landlock Linux Security Module](https://landlock.io/). Seccomp is used by systemd, Chrome, application sandboxes like bubblewrap and firejail, and container runtimes. Seccomp by itself is not a complete sandboxing system.
+extrasafe is an easy-to-use wrapper around various Linux security tools, including [seccomp filters](https://www.kernel.org/doc/html/latest/userspace-api/seccomp_filter.html) syscall-filtering functionality to prevent your program from calling syscalls you don't need, [the Landlock Linux Security Module](https://landlock.io/) for more fine-grained control over IO operations, and [user namespaces](https://man7.org/linux/man-pages/man7/user_namespaces.7.html) for broader isolation. These tools are used by systemd, Chrome, container runtimes, and application sandboxes like bubblewrap and firejail.
 
 The goal of extrasafe is to make it easy to add extra security to your own programs without having to rely on external configuration by the person running the software.
 
@@ -66,7 +64,7 @@ fn main() {
 }
 ```
 
-Check out the [**user guide here**](https://github.com/boustrophedon/extrasafe/blob/master/user-guide.md)
+For examples of using user namespaces via extrasafe's `Isolate`, and more detailed information on the rest of extrasafe's features, check out the [**user guide here**](https://github.com/boustrophedon/extrasafe/blob/master/user-guide.md) and take a look at the [examples directory](https://github.com/boustrophedon/extrasafe/tree/master/examples)
 
 # Who is extrasafe for?
 
@@ -119,7 +117,7 @@ Why not both? Keep reading.
 
 ## Why not use systemd's built-in seccomp support?
 
-systemd supports filtering child processes' syscalls with seccomp via the `SystemCallFilter` attribute. See [e.g. this blog post](https://prefetch.net/blog/2017/11/27/securing-systemd-services-with-seccomp-profiles/) and [the systemd documentation]()
+systemd supports filtering child processes' syscalls with seccomp via the `SystemCallFilter` attribute. See [e.g. this blog post](https://prefetch.net/blog/2017/11/27/securing-systemd-services-with-seccomp-profiles/) and [the systemd documentation](https://www.freedesktop.org/software/systemd/man/latest/systemd.exec.html#System%20Call%20Filtering)
 
 Issues:
 
@@ -139,8 +137,6 @@ As mentioned above, you should continue to use Linux Security Modules like AppAr
 In the same way, from the perspective of a developer, there's no guarantee that the person running your code is using them. When there's a bug in your open-source code running on thousands of machines outside of your control, it's much nicer to know that it's not easily exploitable and can be fixed at your leisure, rather than having to coordinate a massive patch-and-upgrade effort to secure the systems. 
 
 # Development
-
-Using make as a simple command runner until `just` is packaged for Ubuntu/Debian, or you can run the cargo commands directly.
 
 ## Tests
 
