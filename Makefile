@@ -11,6 +11,7 @@ test-ci:
 	cargo test --target=$(TARGET_TRIPLE) --tests --examples --all-features
 	cargo test --target=$(TARGET_TRIPLE) --tests --examples --no-default-features
 	cargo run --all-features --example isolate_test
+	cargo run --all-features --example ipc_server_with_database
 
 # Run clippy
 lint:

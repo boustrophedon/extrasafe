@@ -407,10 +407,3 @@ fn main() {
     db_child.kill().unwrap();
     webserver_child.kill().unwrap();
 }
-
-// TODO: this test randomly doesn't complete in github CI. investigate later but disable for now
-// since I don't think it's adding significant coverage compared to the non-ipc version.
-//#[test]
-//fn run_main() {
-//    main()
-//}
