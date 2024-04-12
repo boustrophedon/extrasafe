@@ -14,11 +14,9 @@
 use extrasafe::builtins::{danger_zone::Threads, Networking, SystemIO};
 use extrasafe::SafetyContext;
 
-use std::io::prelude::*;
-
 use warp::Filter;
 
-use std::os::unix::net::{UnixListener, UnixStream};
+use std::os::unix::net::UnixDatagram;
 use std::os::unix::process::CommandExt;
 
 use std::sync::{Arc, Mutex};
@@ -31,7 +29,7 @@ enum DBMsg {
     Write(String),
 }
 
-type DbConn = Arc<Mutex<UnixStream>>;
+type DbConn = Arc<Mutex<UnixDatagram>>;
 
 fn run_subprocess(cmd: &[&str]) -> std::process::Child {
     let exe_path = std::env::current_exe().unwrap();
@@ -52,12 +50,13 @@ fn with_db(
     warp::any().map(move || db.clone())
 }
 
-fn run_webserver(db_socket_path: &str) {
+fn run_webserver(db_socket_path: &str, our_socket_path: &str) {
     // we open the socket ahead of time and share it among all webserver http threads (just like
     // with a real db connection we could have a pool of them instead of a single one)
 
     println!("webserver thread connecting to db unix socket");
-    let socket = UnixStream::connect(db_socket_path).expect("failed to connect to db socket");
+    let socket = UnixDatagram::bind(our_socket_path).expect("failed to create unix dg socket");
+    socket.connect(db_socket_path).expect("failed to connect to db socket");
     let db_socket: DbConn = Arc::new(Mutex::new(socket));
 
     // set up runtime
@@ -80,10 +79,10 @@ fn run_webserver(db_socket_path: &str) {
         .and(with_db(db_socket.clone()))
         .map(|param: bytes::Bytes, db_conn: DbConn| {
             println!("webserver got write request");
-            let mut conn = db_conn.lock().unwrap();
+            let conn = db_conn.lock().unwrap();
 
             let s = std::str::from_utf8(&param).unwrap();
-            conn.write_all(format!("write {}", s).as_bytes())
+            conn.send(format!("write {}", s).as_bytes())
                 .expect("failed to send write message to db");
 
             "ok"
@@ -93,15 +92,15 @@ fn run_webserver(db_socket_path: &str) {
             .and(with_db(db_socket))
             .map(|db_conn: DbConn| {
                 println!("webserver got read request");
-                let mut conn = db_conn.lock().unwrap();
+                let conn = db_conn.lock().unwrap();
 
                 println!("sending list command to db");
-                conn.write_all("list".as_bytes())
+                conn.send("list".as_bytes())
                     .expect("failed to send read message to db");
 
                 println!("waiting for response from db");
                 let mut buf: [u8; 100] = [0; 100];
-                conn.read(&mut buf)
+                conn.recv(&mut buf)
                     .expect("failed to read response from db");
                 println!("got response from db");
 
@@ -132,8 +131,8 @@ fn run_webserver(db_socket_path: &str) {
 }
 
 fn run_db(socket_path: &str) {
-    // open socket connection to listen to requests on
-    let socket = UnixListener::bind(socket_path).unwrap();
+    // bind socket connection to get data packets on
+    let sock = UnixDatagram::bind(socket_path).unwrap();
 
     // open sqlite database
     let dir = tempfile::tempdir().unwrap();
@@ -171,26 +170,15 @@ fn run_db(socket_path: &str) {
 
     println!("database opened at {:?}", &path);
 
-    println!("db server waiting to accept connection");
-    // We only ever expect one connection from our webserver, so we wait for it and then loop
-    let conn = socket.accept();
-    if let Err(err) = conn {
-        panic!("Error accepting db connection: {:?}", err);
-    }
-
-    let (mut conn, _) = conn.unwrap();
-    println!("db server got connection on unix socket");
-
+    println!("db server waiting for messages");
     loop {
         println!("db server waiting for unix socket message");
         let mut buf: [u8; 100] = [0; 100];
-        conn.read(&mut buf)
+        let (count, return_addr) = sock.recv_from(&mut buf)
             .expect("failed reading request to db server");
 
-        let buf = String::from_utf8(buf.to_vec())
-            .unwrap()
-            .trim_end_matches('\0')
-            .to_string();
+        let buf = String::from_utf8(buf[..count].to_vec())
+            .expect("unix socket message was not valid utf8");
 
         println!("db got unix socket message: '{}'", buf);
 
@@ -212,7 +200,7 @@ fn run_db(socket_path: &str) {
                     .map(Result::unwrap)
                     .collect();
 
-                conn.write_all(messages.join("\n").as_bytes())
+                sock.send_to_addr(messages.join("\n").as_bytes(), &return_addr)
                     .expect("failed writing response from db server");
             }
             DBMsg::Write(s) => {
@@ -326,6 +314,11 @@ fn run_client_read() {
     });
 }
 
+#[cfg(target_env = "musl")]
+fn main() {
+    println!("without building sqlite from source we can't link to sqlite, but it would be annoying to build it in CI.");
+}
+#[cfg(not(target_env = "musl"))]
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     println!("main args: {:?}", args);
@@ -336,7 +329,7 @@ fn main() {
             run_db(&args[idx+1]);
         }
         else if let Some(idx) = args.iter().position(|s| s == "webserver") {
-            run_webserver(&args[idx+1]);
+            run_webserver(&args[idx+1], &args[idx+2]);
         }
         else if args.contains(&"read_client".into()) {
             run_client_read();
@@ -352,14 +345,16 @@ fn main() {
     // each time.
 
     let dir = tempfile::TempDir::new().unwrap();
-    let mut path = dir.path().to_path_buf();
-    path.push("db.sock");
+    let mut db_path = dir.path().to_path_buf();
+    db_path.push("db.sock");
+    let mut web_path = dir.path().to_path_buf();
+    web_path.push("web.sock");
 
     // -- Spawn database, spawn http server, waiting a bit for each to finish getting ready.
-    let mut db_child = run_subprocess(&["db", path.to_str().unwrap()]);
+    let mut db_child = run_subprocess(&["db", db_path.to_str().unwrap()]);
     std::thread::sleep(std::time::Duration::from_millis(100));
 
-    let mut webserver_child = run_subprocess(&["webserver", path.to_str().unwrap()]);
+    let mut webserver_child = run_subprocess(&["webserver", db_path.to_str().unwrap(), web_path.to_str().unwrap()]);
     std::thread::sleep(std::time::Duration::from_millis(100));
 
     // -- write "hello" to db

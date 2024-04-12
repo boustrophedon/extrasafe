@@ -303,13 +303,16 @@ fn network_call() {
 
 fn isolate_with_network(name: &'static str) -> Isolate {
     Isolate::new(name, network_call)
-        // Just mount all of / because ssl and dns files are all over the place.
+        // ssl and dns files are all over the place.
         // If you wanted you could further restrict it via landlock or by mounting only specific
         // files and directories but it highly depends on your operating system and DNS setup. One
         // thing in particular to note is that if a file exists but it's a symlink to somewhere
         // outside the filesystem, something (e.g. openssl) might see that the file is there and
         // it can stat it, but then will try to read the file and crash.
-        .add_bind_mount("/", "/")
+        .add_bind_mount("/etc", "/etc")
+        .add_bind_mount("/usr", "/usr")
+        .add_bind_mount("/run", "/run")
+        .add_bind_mount("/lib", "/lib")
         .new_network(false)
 }
 
