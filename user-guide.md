@@ -1,4 +1,20 @@
-# How to use extrasafe
+# extrasafe user guide
+
+## Overview
+
+extrasafe currently consists of two main components: [`SafetyContext`](https://docs.rs/extrasafe/latest/extrasafe/struct.SafetyContext.html) and [`Isolate`](https://docs.rs/extrasafe/latest/extrasafe/isolate/struct.Isolate.html)
+
+`SafetyContext` is used to create [seccomp](https://www.kernel.org/doc/html/v4.19/userspace-api/seccomp_filter.html) and [Landlock](https://landlock.io/) filters, while `Isolate` is used to launch and configure [unprivileged user namespaces](https://man7.org/linux/man-pages/man7/namespaces.7.html)
+
+`seccomp` is a Linux kernel facility that allows you to voluntarily prohibit your code from calling specified syscalls, but is somewhat course-grained and cannot effectively filter syscalls with complicated arguments. `Landlock` allows for more fine-grained access control over filesystem (and recently network, although this is not available in extrasafe currently) operations.
+
+Linux `namespaces` operate at a higher level of abstraction than seccomp or landlock, and change how entire Linux subsystems operate. They are the core feature that powers container runtimes, and allow your program to have root-like control over isolated filesystems, networks, process spaces, and users. extrasafe Isolates use namespaces to make your program run in an environment where it doesn't have access to the rest of your regular filesystem, network (optionally), and process tree. Isolates are suitable for running subprocesses and using libraries that may be more likely to have vulnerabilities, like image and video processing code, although that doesn't make them perfectly secure - user namespaces have had vulnerabilities in the past.
+
+Once applied, all of these security features are enabled permanently for the lifetime of the thread, and all new threads and subprocesses created after they are enabled. Additionally, seccomp allows you to apply its filters to **all** threads at once, even ones that are already running.
+
+Together, all of these security features allow developers to secure their programs from the inside (as opposed to externally via things like [AppArmor](https://apparmor.net/) and [selinux](https://www.redhat.com/en/topics/linux/what-is-selinux)) and hedge against undiscovered vulnerabilities lurking in your or others' code.
+
+## Basic `SafetyContext` usage
 
 See [the corresponding example in the source code](https://github.com/boustrophedon/extrasafe/blob/master/examples/user-guide.rs) for an executable version of this guide's code.
 

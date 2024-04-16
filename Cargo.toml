@@ -9,6 +9,9 @@ license = "MIT"
 keywords = ["security", "seccomp", "landlock", "syscall"]
 categories = ["os::linux-apis"]
 
+[package.metadata.docs.rs]
+all-features = true
+
 [features]
 landlock = ["dep:landlock"]
 isolate = []
