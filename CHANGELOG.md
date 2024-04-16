@@ -1,5 +1,7 @@
 unreleased
 ----------
+- Minor docs/user guide update
+- Use unix datagram sockets instead of stream in ipc server example and run in CI
 
 0.5.0
 -----

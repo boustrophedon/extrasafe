@@ -22,6 +22,7 @@ fn main() {
     eprintln!("and so does stderr!");
 }
 ```
+[**user guide**](https://github.com/boustrophedon/extrasafe/blob/master/user-guide.md)
 
 You've used safe and unsafe Rust: now your code can be extrasafe.
 
