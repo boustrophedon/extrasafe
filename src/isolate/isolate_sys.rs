@@ -177,8 +177,19 @@ fn mount_tmpfs(tempdir: &Path, max_size: u32) {
     fail_negative!(rc, "failed to make tmpfs private after mounting");
 }
 
-/// Set up a bindmount inside the new root
+/// Set up a bindmount inside the new root. root is the root tmpfs dir, src is a directory from the
+/// original filesystem, and dst is the location inside root in which to bindmount src. dst may be
+/// absolute or relative - in both cases it is joined to root. Intermediate directories are created
+/// automatically when mounting.
 fn do_bindmount(root: &Path, src: &Path, dst: &Path) {
+    // TODO (?) does this actually have any security implications? It seems like a good thing to do
+    // in general but I'm not sure if you could actually do anything "bad" with it that you
+    // couldn't do if an attacker otherwise controlled a dst path.
+    for a in dst.ancestors() {
+        assert!(!a.ends_with("."), "bindmount dst directory must not contain . paths: {}", dst.display());
+        assert!(!a.ends_with(".."), "bindmount dst directory must not contain .. paths: {}", dst.display());
+    }
+
     let dst = if dst.is_absolute() { dst.strip_prefix("/").unwrap() } else { dst };
     let dst = root.join(dst);
 
