@@ -74,8 +74,12 @@ impl Isolate {
 
     /// Bind mount the file or path in src to the file or path in dst. If `dst` is relative, it is
     /// treated as relative to the root of the isolate's tmpfs. If `dst` is absolute, it will still
-    /// be absolute relative to the isolate's tmpfs root.`dst` will be created if it does not
-    /// exist.
+    /// be joined as if it were relative to the isolate's tmpfs root. `dst` will be created if it does not
+    /// exist, including all intermediate directories.
+    ///
+    /// Bindmounts to files and symlinks are allowed, but if a symlink points outside the current
+    /// filesystem it will not function.
+    ///
     /// Bind mounts are not created until `Isolate::main_hook` executes.
     pub fn add_bind_mount(mut self, src: impl AsRef<Path>, dst: impl AsRef<Path>) -> Isolate {
         let src = src.as_ref();

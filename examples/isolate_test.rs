@@ -188,6 +188,29 @@ fn test_safetycontext() {
 
 }
 
+/// Test an `Isolate` will not bindmount outside of its root
+fn test_isolate_bad_bindmount() {
+    // test /..
+    let output = Isolate::run("isolate_bad_bindmount_absolute", &HashMap::new())
+        .expect("running isolate failed");
+    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+
+    assert!(!output.status.success(), "{:?}\nstdout {}\nstderr {}", output.status, stdout, stderr);
+    assert!(stderr.contains("dst directory must not contain .. paths:"), "{:?}\nstdout {}\nstderr {}", output.status, stdout, stderr);
+
+    // test ./
+    let output = Isolate::run("isolate_bad_bindmount_relative", &HashMap::new())
+        .expect("running isolate failed");
+    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+
+    assert!(!output.status.success(), "{:?}\nstdout {}\nstderr {}", output.status, stdout, stderr);
+    assert!(stderr.contains("dst directory must not contain . paths:"), "{:?}\nstdout {}\nstderr {}", output.status, stdout, stderr);
+    println!("isolate_bad_bindmount passed");
+}
+
+
 fn isolate_uid(name: &'static str) -> Isolate {
     fn uid() {
         let uid = unsafe { libc::getuid() };
@@ -321,6 +344,24 @@ fn isolate_no_network(name: &'static str) -> Isolate {
         .add_bind_mount("/", "/")
 }
 
+fn isolate_bad_bindmount_absolute(name: &'static str) -> Isolate {
+    // we will not reach the actual isolate so it doesn't matter what function we call
+    fn hello() {
+        println!("hello");
+    }
+    Isolate::new(name, hello)
+        .add_bind_mount("/", "/a/b/../../..")
+}
+
+fn isolate_bad_bindmount_relative(name: &'static str) -> Isolate {
+    // we will not reach the actual isolate so it doesn't matter what function we call
+    fn hello() {
+        println!("hello");
+    }
+    Isolate::new(name, hello)
+        .add_bind_mount("/", "./a/")
+}
+
 fn isolate_with_safetycontext(name: &'static str) -> Isolate {
     use extrasafe::SafetyContext;
     use extrasafe::builtins::*;
@@ -357,6 +398,8 @@ fn main() {
     Isolate::main_hook("isolate_with_network", isolate_with_network);
     Isolate::main_hook("isolate_no_network", isolate_no_network);
     Isolate::main_hook("isolate_with_safetycontext", isolate_with_safetycontext);
+    Isolate::main_hook("isolate_bad_bindmount_absolute", isolate_bad_bindmount_absolute);
+    Isolate::main_hook("isolate_bad_bindmount_relative", isolate_bad_bindmount_relative);
 
     let argv0 = std::env::args().next().unwrap();
     if argv0.contains("isolate_test") {
@@ -378,6 +421,7 @@ fn main() {
         test_no_network();
         test_tmpfs_size_limit();
         test_isolate_fail();
+        test_isolate_bad_bindmount();
     }
     else {
         panic!("isolate didn't hit its hook: {}", argv0);
