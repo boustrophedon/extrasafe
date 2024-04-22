@@ -42,7 +42,9 @@ impl RuleSet for BasicCapabilities {
 
             // Readlink isn't dangerous because you still need to be able to open the file to do
             // anything with the resolved name.
+            #[cfg(target_arch = "x86_64")]
             Sysno::readlink,
+            Sysno::readlinkat,
 
             // Getpid/tid is fine.
             Sysno::getpid,

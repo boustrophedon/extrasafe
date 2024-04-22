@@ -530,8 +530,8 @@ impl SafetyContext {
             assert!(result.is_none(), "extrasafe logic error: somehow inserted the same syscall's rules twice");
         }
 
-        #[cfg(not(all(target_arch = "x86_64", target_os = "linux")))]
-        compile_error!("extrasafe is currently only supported on linux x86_64");
+        #[cfg(not(all(target_os = "linux", any(target_arch = "aarch64", target_arch = "x86_64"))))]
+        compile_error!("extrasafe is currently only supported on arm64 and amd64 linux");
 
         let seccompiler_filter = SeccompilerFilter::new(
             rules_map,

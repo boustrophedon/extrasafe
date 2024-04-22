@@ -8,7 +8,11 @@ use crate::RuleSet;
 pub struct Pipes;
 impl RuleSet for Pipes {
     fn simple_rules(&self) -> Vec<Sysno> {
-        vec![Sysno::pipe, Sysno::pipe2]
+        vec![
+            #[cfg(target_arch = "x86_64")]
+            Sysno::pipe,
+            Sysno::pipe2
+        ]
     }
 
     fn name(&self) -> &'static str {
