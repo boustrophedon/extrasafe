@@ -1,6 +1,6 @@
 //! Extrasafe's `Isolate` allows you to run a subprocess in a [user
 //! namespace](https://man7.org/linux/man-pages/man7/user_namespaces.7.html), which allows you to
-//! isolate your program in order to e.g. run 
+//! isolate your program in order to e.g. run
 //!
 //! Specifically, you can isolate:
 //! - The filesystem. The Isolate creates a temporary directory and mounts a tmpfs onto it, and
@@ -20,11 +20,11 @@
 // - bind mount directory list
 // - tmpfs size?
 
-use std::path::{Path, PathBuf};
 use std::collections::HashMap;
-use std::os::unix::process::CommandExt;
 use std::os::fd::AsRawFd;
-use std::process::Output;
+use std::os::unix::process::CommandExt;
+use std::path::{Path, PathBuf};
+use std::process::{Output, Stdio};
 
 mod isolate_sys;
 use isolate_sys as system;
@@ -38,7 +38,6 @@ pub enum IsolateError {
     Command(std::io::Error),
     /// An error that occurred while configuring a bindmount (in the subprocess but before clone)
     BindmountConfig(std::io::Error),
-
 }
 
 /// Allows creation of subprocesses which then use Linux user namespaces to isolate the program
@@ -84,7 +83,7 @@ impl Isolate {
     pub fn add_bind_mount(mut self, src: impl AsRef<Path>, dst: impl AsRef<Path>) -> Isolate {
         let src = src.as_ref();
         let dst = dst.as_ref();
-        
+
         let _old = self.bindmounts.insert(src.into(), dst.into());
         self
     }
@@ -109,12 +108,17 @@ impl Isolate {
     ///
     /// # Errors
     /// Will return an error if starting the Command fails.
-    pub fn run(isolate_name: &'static str, envs: &HashMap<String, String>) -> Result<Output, IsolateError> {
+    pub fn run(
+        isolate_name: &'static str,
+        envs: &HashMap<String, String>,
+    ) -> Result<Output, IsolateError> {
         let memfd = system::create_memfd_from_self_exe()?;
         std::process::Command::new(format!("/proc/self/fd/{}", memfd.as_raw_fd()))
             .arg0(isolate_name)
             .env_clear()
             .envs(envs)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
             .output()
             .map_err(IsolateError::Command)
     }
@@ -130,8 +134,7 @@ impl Isolate {
         struct TempDirCleanup(pub PathBuf);
         impl Drop for TempDirCleanup {
             fn drop(&mut self) {
-                std::fs::remove_dir(&self.0)
-                    .expect("tmpfs dir was not empty");
+                std::fs::remove_dir(&self.0).expect("tmpfs dir was not empty");
             }
         }
 
@@ -146,7 +149,8 @@ impl Isolate {
 
                 let mut child_stack = Vec::with_capacity(system::CHILD_STACK_SIZE);
 
-                let (_child_pid, child_pidfd) = isolate.isolate_and_run(&mut child_stack, tempdir.clone());
+                let (_child_pid, child_pidfd) =
+                    isolate.isolate_and_run(&mut child_stack, tempdir.clone());
                 let child_ret = system::wait_for_child(child_pidfd);
 
                 drop(tempdir_clean);
@@ -158,14 +162,19 @@ impl Isolate {
 
     /// `clone`s into a new namespace, creates a tmpfs at `tempdir`, bindmounts the relevant
     /// directories into it, `pivot_root`s into the tmpfs, and runs `self.func`
-    fn isolate_and_run(&self, child_stack: &mut [u8], tempdir: PathBuf) -> (libc::pid_t, libc::id_t) {
+    fn isolate_and_run(
+        &self,
+        child_stack: &mut [u8],
+        tempdir: PathBuf,
+    ) -> (libc::pid_t, libc::id_t) {
         let new_network = self.new_network;
         let data = system::IsolateConfigData::new(
             self.isolate_name,
             self.bindmounts.clone(),
             self.func,
             self.root_fs_size,
-            tempdir);
+            tempdir,
+        );
         system::clone_into_namespace(child_stack, data, new_network)
     }
 }
