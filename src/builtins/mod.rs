@@ -1,5 +1,16 @@
 //! Built-in [`RuleSet`](crate::RuleSet)s
 
+pub mod basic;
+pub mod danger_zone;
+pub mod network;
+pub mod pipes;
+pub mod systemio;
+pub mod time;
+
+pub use self::{
+    basic::BasicCapabilities, network::{Networking, Netlink}, systemio::SystemIO, time::Time,
+};
+
 /// A struct whose purpose is to make you read the documentation for the function you're calling.
 /// If you're reading this, go read the documentation for the function that is returning this
 /// object.
@@ -16,23 +27,6 @@ impl<T> YesReally<T> {
 
     /// Make a [`YesReally`].
     pub fn new(inner: T) -> YesReally<T> {
-        YesReally {
-            inner,
-        }
+        YesReally { inner }
     }
 }
-
-pub mod basic;
-pub use basic::BasicCapabilities;
-
-pub mod systemio;
-pub use systemio::SystemIO;
-
-pub mod network;
-pub use network::Networking;
-
-pub mod time;
-pub use time::Time;
-
-pub mod danger_zone;
-pub mod pipes;
