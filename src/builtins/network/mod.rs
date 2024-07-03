@@ -1,11 +1,16 @@
 //! Contains a [`RuleSet`] for allowing networking-related syscalls.
 
-use std::collections::{HashMap, HashSet};
+pub mod netlink;
+pub mod socket_pair;
 
-use syscalls::Sysno;
+use {
+    super::YesReally,
+    crate::{RuleSet, SeccompRule},
+    std::collections::{HashMap, HashSet},
+    syscalls::Sysno,
+};
 
-use super::YesReally;
-use crate::{SeccompRule, RuleSet};
+pub use self::{netlink::Netlink, socket_pair::SocketPair};
 
 // TODO: make bind calls conditional on the DGRAM/UNIX/STREAM flag in each function
 
@@ -205,7 +210,7 @@ impl Networking {
         self.custom.entry(Sysno::socket)
             .or_insert_with(Vec::new)
             .push(rule);
-        
+
         self.allowed.extend(&[Sysno::connect]);
         self.allowed.extend(NET_IO_SYSCALLS);
         self.allowed.extend(NET_READ_SYSCALLS);
