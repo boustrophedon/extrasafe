@@ -46,6 +46,9 @@ pub use landlock::*;
 #[cfg(feature = "isolate")]
 pub mod isolate;
 
+mod capabilities;
+pub use capabilities::drop_all_caps;
+
 #[cfg(feature = "landlock")]
 use std::path::PathBuf;
 use std::collections::{BTreeMap, HashMap};

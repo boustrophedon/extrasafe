@@ -1,5 +1,6 @@
 unreleased
 ----------
+- Add `drop_all_caps` function.
 
 0.5.1
 -----
