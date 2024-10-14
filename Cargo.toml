@@ -1,40 +1,47 @@
-[package]
-name = "extrasafe"
+[workspace]
+members = [
+  "extrasafe"
+]
+resolver = "2"
+
+[workspace.package]
 version = "0.5.1"
+authors = [
+  "Harry Stern <harry@harrystern.net>",
+]
 edition = "2021"
-authors = ["Harry Stern <harry@harrystern.net>",]
-description = "Make your code extrasafe by reducing what it can access."
+rust-version = "1.74.0"
 repository = "https://github.com/boustrophedon/extrasafe"
 license = "MIT"
-keywords = ["security", "seccomp", "landlock", "syscall"]
-categories = ["os::linux-apis"]
+categories = [ "os::linux-apis" ]
 
-[package.metadata.docs.rs]
+[workspace.package.metadata.docs.rs]
 all-features = true
 
-[features]
-landlock = ["dep:landlock"]
-isolate = []
-
-[dependencies]
-seccompiler = { version = "^0.4", default-features = false }
-libc = "^0.2"
-syscalls = { version = "^0.6", default-features = false }
-landlock = { version ="^0.3", optional = true }
-
-[dev-dependencies]
+[workspace.dependencies]
 bytes = "^1"
 crossbeam = "^0.8"
 crossbeam-queue = "^0.3"
 crossbeam-channel = "^0.5"
+landlock = "^0.3"
+libc = "^0.2"
+rusqlite = "^0.32"
 tempfile = "^3"
 tokio = "^1.15"
-hyper = { version = "^0.14", features = ["http1", "server", "runtime", "tcp"] }
 warp = "^0.3"
-rusqlite = "^0.26"
 
-[target.'cfg(target_env = "musl")'.dev-dependencies]
-reqwest = { version = "^0.11", default-features = false, features = ["rustls-tls"] }
+[workspace.dependencies.hyper]
+version = "^0.14"
+features = [ "http1", "server", "runtime", "tcp" ]
 
-[target.'cfg(not(target_env = "musl"))'.dev-dependencies]
-reqwest = { version = "^0.11" }
+[workspace.dependencies.reqwest]
+version = "^0.11"
+default-features = false
+
+[workspace.dependencies.seccompiler]
+version = "^0.4"
+default-features = false
+
+[workspace.dependencies.syscalls]
+version = "^0.6"
+default-features = false
