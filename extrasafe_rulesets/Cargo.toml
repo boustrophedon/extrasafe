@@ -1,0 +1,42 @@
+[package]
+name = "extrasafe_rulesets"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "Set of useful rulesets for extrasafe"
+#documentation = "https://docs.rs/extrasafe-rulesets/latest/extrasafe-rulesets"
+readme = "README.md"
+#homepage = ""
+repository.workspace = true
+license.workspace = true
+keywords = [ "security", "seccomp", "syscall" ]
+categories.workspace = true
+metadata.workspace = true
+
+[features]
+landlock = [ "extrasafe/landlock" ]
+isolate = [ "extrasafe/isolate" ]
+
+[dependencies]
+extrasafe.workspace = true
+libc.workspace = true
+
+[dev-dependencies]
+bytes.workspace = true
+crossbeam.workspace = true
+crossbeam-queue.workspace = true
+crossbeam-channel.workspace = true
+hyper.workspace = true
+rusqlite.workspace = true
+tempfile.workspace = true
+tokio.workspace = true
+warp.workspace = true
+
+[target.'cfg(target_env = "musl")'.dev-dependencies.reqwest]
+workspace = true
+features = [ "rustls-tls" ]
+
+[target.'cfg(not(target_env = "musl"))'.dev-dependencies.reqwest]
+workspace = true
+features = [ "default" ]

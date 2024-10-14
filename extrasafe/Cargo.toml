@@ -1,0 +1,46 @@
+[package]
+name = "extrasafe"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "Make your code extrasafe by reducing what it can access."
+documentation = "https://docs.rs/extrasafe/latest/extrasafe"
+readme = "README.md"
+#homepage = ""
+repository.workspace = true
+license.workspace = true
+keywords = [ "security", "seccomp", "landlock", "syscall" ]
+categories.workspace = true
+metadata.workspace = true
+
+[features]
+landlock = [ "dep:landlock" ]
+isolate = [ ]
+
+[dependencies]
+libc.workspace = true
+seccompiler.workspace = true
+syscalls.workspace = true
+
+# Optional Dependencies:
+landlock = { workspace = true, optional = true }
+
+[dev-dependencies]
+bytes.workspace = true
+crossbeam.workspace = true
+crossbeam-queue.workspace = true
+crossbeam-channel.workspace = true
+hyper.workspace = true
+rusqlite.workspace = true
+tempfile.workspace = true
+tokio.workspace = true
+warp.workspace = true
+
+[target.'cfg(target_env = "musl")'.dev-dependencies.reqwest]
+workspace = true
+features = [ "rustls-tls" ]
+
+[target.'cfg(not(target_env = "musl"))'.dev-dependencies.reqwest]
+workspace = true
+features = [ "default" ]
